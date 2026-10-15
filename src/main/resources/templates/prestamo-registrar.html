@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Préstamo - PagaOPiu</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card-custom { border-radius: 10px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold" th:href="@{/}">🏦 PagaOPiu</a>
+        <div class="d-flex align-items-center text-white">
+            <span class="me-3" sec:authorize="isAuthenticated()">
+                👤 <span sec:authentication="name" class="fw-semibold"></span>
+                <span class="badge bg-light text-primary ms-1" sec:authentication="principal.authorities"></span>
+            </span>
+            <form th:action="@{/logout}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-light btn-sm">Cerrar Sesión</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-7 col-md-9">
+
+            <div class="card card-custom p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="fw-bold text-primary mb-0">📝 Registro de Préstamo</h4>
+                    <a th:href="@{/cliente/buscar}" class="btn btn-outline-secondary btn-sm">🔍 Buscar en RENIEC</a>
+                </div>
+                <p class="text-muted small">Complete los datos del crédito. El cliente será validado según las reglas de negocio del sistema.</p>
+
+                <!-- Alerta de Error de Negocio -->
+                <div th:if="${error}" class="alert alert-danger py-2 mb-3" role="alert">
+                    <strong>⚠️ Error:</strong> <span th:text="${error}"></span>
+                </div>
+
+                <form th:action="@{/prestamo/registrar}" th:object="${prestamo}" method="post">
+                    
+                    <!-- DNI con botón de autocompletar -->
+                    <div class="mb-3">
+                        <label for="dni" class="form-label fw-semibold">DNI del Cliente</label>
+                        <div class="input-group">
+                            <input type="text" id="dni" th:field="*{dni}" class="form-control"
+                                   placeholder="DNI de 8 dígitos..." maxlength="8" required autofocus>
+                            <button type="button" class="btn btn-outline-primary" id="btnConsultarReniec">
+                                🔄 Consultar RENIEC
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Nombre Completo (Autocompletado de RENIEC en solo lectura) -->
+                    <div class="mb-3">
+                        <label for="nombreCliente" class="form-label fw-semibold">Nombre Completo (según RENIEC)</label>
+                        <input type="text" id="nombreCliente" th:field="*{nombreCliente}" class="form-control bg-light"
+                               placeholder="Se completará automáticamente desde RENIEC..." readonly required>
+                        <div class="form-text">El nombre debe coincidir exactamente con el padrón oficial.</div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Fecha del Préstamo -->
+                        <div class="col-md-6 mb-3">
+                            <label for="fechaPrestamo" class="form-label fw-semibold">Fecha del Préstamo</label>
+                            <input type="date" id="fechaPrestamo" th:field="*{fechaPrestamo}" class="form-control" required>
+                            <div class="form-text">No puede ser una fecha futura.</div>
+                        </div>
+
+                        <!-- Plazo en Meses -->
+                        <div class="col-md-6 mb-3">
+                            <label for="plazoMeses" class="form-label fw-semibold">Plazo (Meses)</label>
+                            <input type="number" id="plazoMeses" th:field="*{plazoMeses}" class="form-control"
+                                   placeholder="1 a 60 meses" min="1" max="60" required>
+                            <div class="form-text">Rango permitido: 1 a 60 meses.</div>
+                        </div>
+                    </div>
+
+                    <!-- Monto del Préstamo -->
+                    <div class="mb-4">
+                        <label for="monto" class="form-label fw-semibold">Monto Solicitado (S/)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">S/</span>
+                            <input type="number" step="0.01" id="monto" th:field="*{monto}" class="form-control form-control-lg fw-bold text-success"
+                                   placeholder="0.00" min="1" max="10000" required>
+                        </div>
+                        <div class="form-text">Monto mínimo: S/ 1.00 | Tope máximo de deuda: S/ 10,000.00.</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a th:href="@{/}" class="btn btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-success btn-lg px-4 fw-semibold">
+                            💾 Registrar Préstamo y Generar Cronograma
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        var fp = document.getElementById('fechaPrestamo');
+        if (fp) {
+            var hoy = new Date();
+            var yyyy = hoy.getFullYear();
+            var mm = String(hoy.getMonth() + 1).padStart(2, '0');
+            var dd = String(hoy.getDate()).padStart(2, '0');
+            fp.min = yyyy + '-' + mm + '-01';
+            fp.max = yyyy + '-' + mm + '-' + dd;
+        }
+    })();
+
+    document.getElementById('btnConsultarReniec').addEventListener('click', function() {
+        var dniVal = document.getElementById('dni').value.trim();
+        if (dniVal.length === 8) {
+            window.location.href = '/prestamo/registrar?dni=' + encodeURIComponent(dniVal);
+        } else {
+            alert('Por favor ingrese un DNI válido de 8 dígitos.');
+        }
+    });
+</script>
+
+</body>
+</html>

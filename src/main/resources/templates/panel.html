@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel del Gerente - PagaOPiu</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card-custom { border-radius: 10px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+        .kpi-title { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; color: #6c757d; }
+        .kpi-value { font-size: 1.8rem; font-weight: 700; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold text-light" th:href="@{/panel}">🏦 PagaOPiu — Gerencia General</a>
+        <div class="d-flex align-items-center text-white">
+            <span class="me-3" sec:authorize="isAuthenticated()">
+                👔 <span sec:authentication="name" class="fw-semibold"></span>
+                <span class="badge bg-secondary ms-1">GERENTE</span>
+            </span>
+            <form th:action="@{/logout}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-light btn-sm">Cerrar Sesión</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">📈 Panel de Control y Supervisión Global (R14)</h3>
+            <p class="text-muted mb-0 small">Consolidado general de operaciones crediticias y cobranza por sucursal en tiempo real.</p>
+        </div>
+        <div>
+            <a th:href="@{/panel}" class="btn btn-outline-primary btn-sm">🔄 Actualizar Datos</a>
+        </div>
+    </div>
+
+    <!-- KPIs Globales -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-2 col-sm-6">
+            <div class="card card-custom p-3 border-start border-warning border-4">
+                <div class="kpi-title">Clientes Morosos</div>
+                <div class="kpi-value text-warning" th:text="${panel.clientesMorosos}">0</div>
+                <small class="text-muted">Global</small>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <div class="card card-custom p-3 border-start border-danger border-4">
+                <div class="kpi-title">Cobranza Extrajudicial</div>
+                <div class="kpi-value text-danger" th:text="${panel.clientesExtrajudiciales}">0</div>
+                <small class="text-muted">Global (≥365d)</small>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <div class="card card-custom p-3 border-start border-primary border-4">
+                <div class="kpi-title">Préstamos Activos</div>
+                <div class="kpi-value text-primary" th:text="${panel.totalPrestamosActivos}">0</div>
+                <small class="text-muted">Vigentes + Morosos</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card card-custom p-3 border-start border-success border-4">
+                <div class="kpi-title">Total Cobrado</div>
+                <div class="kpi-value text-success" th:text="'S/ ' + ${#numbers.formatDecimal(panel.totalMontoCobrado, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</div>
+                <small class="text-muted">Cobranza realizada</small>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card card-custom p-3 border-start border-info border-4">
+                <div class="kpi-title">Intereses Cobrados</div>
+                <div class="kpi-value text-info" th:text="'S/ ' + ${#numbers.formatDecimal(panel.totalInteresesCobrados, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</div>
+                <small class="text-muted">Ganancia devengada</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla Detallada por Sucursal -->
+    <div class="card card-custom overflow-hidden mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="fw-bold mb-0 text-dark">🏢 Métricas por Sucursal</h5>
+            <small class="text-muted">Préstamos clasificados por sucursal de origen; recaudación e intereses por sucursal de pago.</small>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Sucursal</th>
+                        <th class="text-center">Préstamos Activos</th>
+                        <th class="text-center">Vigentes</th>
+                        <th class="text-center">Morosos</th>
+                        <th class="text-center">Extrajudicial</th>
+                        <th class="text-end">Monto Cobrado</th>
+                        <th class="text-end">Intereses Cobrados</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="sucursal : ${panel.sucursales}">
+                        <td>
+                            <strong th:text="${sucursal.sucursalNombre}">Trujillo</strong>
+                            <span class="badge bg-light text-dark border ms-1" th:text="${sucursal.sucursalCodigo}">TRU</span>
+                        </td>
+                        <td class="text-center fw-semibold" th:text="${sucursal.prestamosActivos}">0</td>
+                        <td class="text-center">
+                            <span class="badge bg-success-subtle text-success border border-success-subtle" th:text="${sucursal.prestamosVigentes}">0</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle" th:text="${sucursal.prestamosMorosos}">0</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle" th:text="${sucursal.prestamosExtrajudiciales}">0</span>
+                        </td>
+                        <td class="text-end fw-semibold text-success" th:text="'S/ ' + ${#numbers.formatDecimal(sucursal.montoTotalCobrado, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</td>
+                        <td class="text-end fw-semibold text-info" th:text="'S/ ' + ${#numbers.formatDecimal(sucursal.interesesCobrados, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</td>
+                    </tr>
+                </tbody>
+                <tfoot class="table-light fw-bold border-top">
+                    <tr>
+                        <td>TOTAL CONSOLIDADO</td>
+                        <td class="text-center" th:text="${panel.totalPrestamosActivos}">0</td>
+                        <td class="text-center text-success" th:text="${panel.totalPrestamosVigentes}">0</td>
+                        <td class="text-center text-warning" th:text="${panel.totalPrestamosMorosos}">0</td>
+                        <td class="text-center text-danger" th:text="${panel.totalPrestamosExtrajudiciales}">0</td>
+                        <td class="text-end text-success" th:text="'S/ ' + ${#numbers.formatDecimal(panel.totalMontoCobrado, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</td>
+                        <td class="text-end text-info" th:text="'S/ ' + ${#numbers.formatDecimal(panel.totalInteresesCobrados, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

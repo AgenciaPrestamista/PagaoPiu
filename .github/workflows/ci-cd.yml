@@ -1,0 +1,79 @@
+name: Backend CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+jobs:
+  # ══════════════════════════════════════════════════════════════
+  # ETAPA 1: INTEGRACIÓN CONTINUA (CI) - Compilación y Tests
+  # ══════════════════════════════════════════════════════════════
+  ci-build-and-test:
+    name: Build & Test (CI)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: ☕ Configurar Java 21 (Eclipse Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: 🔧 Dar permisos de ejecución al Maven Wrapper
+        run: chmod +x ./mvnw
+
+      - name: 🧪 Ejecutar pruebas unitarias e integración
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          RENIEC_PROVIDER: "simulado"
+          RENIEC_API_URL: "https://api.json.pe/api/dni"
+          RENIEC_API_TOKEN: ${{ secrets.RENIEC_API_TOKEN }}
+        run: ./mvnw clean test -B
+
+      - name: 📦 Empaquetar artefacto ejecutable (.jar)
+        run: ./mvnw package -DskipTests -B
+
+      - name: 📤 Publicar artefacto .jar en el pipeline
+        uses: actions/upload-artifact@v4
+        with:
+          name: pagaopiu-backend-jar
+          path: target/*.jar
+          retention-days: 7
+
+  # ══════════════════════════════════════════════════════════════
+  # ETAPA 2: DESPLIEGUE CONTINUO (CD) - Release y Preparación
+  # ══════════════════════════════════════════════════════════════
+  cd-deploy:
+    name: Continuous Deployment (CD)
+    needs: ci-build-and-test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: 📥 Descargar artefacto .jar construido en CI
+        uses: actions/download-artifact@v4
+        with:
+          name: pagaopiu-backend-jar
+          path: target/
+
+      - name: 🔍 Verificar artefacto generado
+        run: |
+          echo "=== Artefacto para Despliegue ==="
+          ls -lh target/*.jar
+
+      - name: 🚀 Registro de despliegue exitoso
+        run: |
+          echo "Despliegue continuo completado para el commit ${{ github.sha }} en ${{ github.ref_name }}."
+          echo "El artefacto está listo para ser desplegado en el servicio de nube correspondiente."
