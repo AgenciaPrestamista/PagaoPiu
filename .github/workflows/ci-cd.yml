@@ -1,11 +1,17 @@
-name: Backend CI/CD Pipeline
+name: Backend CI/CD Pipeline - Google Cloud Run
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [ main, master ]
   workflow_dispatch:
+
+env:
+  PROJECT_ID: 'elaborate-night-511823-t6'
+  REGION: 'us-central1'
+  SERVICE_NAME: 'pagaopiu-backend'
+  REPOSITORY: 'pagaopiu-repo'
 
 jobs:
   # ══════════════════════════════════════════════════════════════
@@ -50,10 +56,10 @@ jobs:
           retention-days: 7
 
   # ══════════════════════════════════════════════════════════════
-  # ETAPA 2: DESPLIEGUE CONTINUO (CD) - Release y Preparación
+  # ETAPA 2: DESPLIEGUE CONTINUO (CD) - Google Cloud Run
   # ══════════════════════════════════════════════════════════════
-  cd-deploy:
-    name: Continuous Deployment (CD)
+  cd-deploy-to-cloud-run:
+    name: Deploy to Google Cloud Run (CD)
     needs: ci-build-and-test
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
@@ -62,18 +68,45 @@ jobs:
       - name: 📥 Clonar repositorio
         uses: actions/checkout@v4
 
-      - name: 📥 Descargar artefacto .jar construido en CI
-        uses: actions/download-artifact@v4
+      - name: 🔑 Autenticación en Google Cloud con Service Account
+        uses: google-github-actions/auth@v2
         with:
-          name: pagaopiu-backend-jar
-          path: target/
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: 🔍 Verificar artefacto generado
-        run: |
-          echo "=== Artefacto para Despliegue ==="
-          ls -lh target/*.jar
+      - name: 🛠️ Configurar gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
 
-      - name: 🚀 Registro de despliegue exitoso
+      - name: 🐳 Configurar Docker para Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: 🏗️ Construir y Subir imagen Docker a Artifact Registry
+        env:
+          IMAGE_TAG: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          IMAGE_LATEST: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:latest
         run: |
-          echo "Despliegue continuo completado para el commit ${{ github.sha }} en ${{ github.ref_name }}."
-          echo "El artefacto está listo para ser desplegado en el servicio de nube correspondiente."
+          docker build -t $IMAGE_TAG -t $IMAGE_LATEST .
+          docker push $IMAGE_TAG
+          docker push $IMAGE_LATEST
+
+      - name: 🚀 Desplegar contenedor en Google Cloud Run
+        env:
+          IMAGE_TAG: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image $IMAGE_TAG \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8080 \
+            --memory 512Mi \
+            --cpu 1 \
+            --set-env-vars "DB_URL=${{ secrets.DB_URL }},DB_USERNAME=${{ secrets.DB_USERNAME }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},RENIEC_PROVIDER=${{ secrets.RENIEC_PROVIDER || 'api' }},RENIEC_API_URL=${{ secrets.RENIEC_API_URL || 'https://api.json.pe/api/dni' }},RENIEC_API_TOKEN=${{ secrets.RENIEC_API_TOKEN }}" \
+            --quiet
+
+      - name: 🌐 Mostrar URL pública del Backend desplegado
+        run: |
+          URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} --format 'value(status.url)')
+          echo "=========================================================="
+          echo "🎉 ¡BACKEND DESPLEGADO EXITOSAMENTE EN GOOGLE CLOUD RUN! 🎉"
+          echo "URL Pública del Backend: $URL"
+          echo "=========================================================="
