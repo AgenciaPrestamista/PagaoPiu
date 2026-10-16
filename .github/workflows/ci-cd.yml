@@ -43,6 +43,7 @@ jobs:
           RENIEC_PROVIDER: "simulado"
           RENIEC_API_URL: "https://api.json.pe/api/dni"
           RENIEC_API_TOKEN: ${{ secrets.RENIEC_API_TOKEN }}
+          FRONTEND_URL: "http://localhost:5173"
         run: ./mvnw clean test -B
 
       - name: 📦 Empaquetar artefacto ejecutable (.jar)
@@ -100,7 +101,7 @@ jobs:
             --port 8080 \
             --memory 512Mi \
             --cpu 1 \
-            --set-env-vars "DB_URL=${{ secrets.DB_URL }},DB_USERNAME=${{ secrets.DB_USERNAME }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},RENIEC_PROVIDER=${{ secrets.RENIEC_PROVIDER || 'api' }},RENIEC_API_URL=${{ secrets.RENIEC_API_URL || 'https://api.json.pe/api/dni' }},RENIEC_API_TOKEN=${{ secrets.RENIEC_API_TOKEN }}" \
+            --set-env-vars "DB_URL=${{ secrets.DB_URL }},DB_USERNAME=${{ secrets.DB_USERNAME }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},RENIEC_PROVIDER=${{ secrets.RENIEC_PROVIDER || 'api' }},RENIEC_API_URL=${{ secrets.RENIEC_API_URL || 'https://api.json.pe/api/dni' }},RENIEC_API_TOKEN=${{ secrets.RENIEC_API_TOKEN }},FRONTEND_URL=${{ secrets.FRONTEND_URL }}" \
             --quiet
 
       - name: 🌐 Mostrar URL pública del Backend desplegado
