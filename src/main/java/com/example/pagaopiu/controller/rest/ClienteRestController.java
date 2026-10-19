@@ -5,6 +5,8 @@ import com.example.pagaopiu.model.entity.ReniecPadron;
 import com.example.pagaopiu.model.enums.EstadoCliente;
 import com.example.pagaopiu.repository.ClienteRepository;
 import com.example.pagaopiu.service.ReniecClient;
+import com.example.pagaopiu.dto.sunat.SunatRucDTO;
+import com.example.pagaopiu.service.SunatClient;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -19,10 +21,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class ClienteRestController {
 
     private final ReniecClient reniecClient;
+    private final SunatClient sunatClient;
     private final ClienteRepository clienteRepository;
 
-    public ClienteRestController(ReniecClient reniecClient, ClienteRepository clienteRepository) {
+    public ClienteRestController(ReniecClient reniecClient, SunatClient sunatClient, ClienteRepository clienteRepository) {
         this.reniecClient = reniecClient;
+        this.sunatClient = sunatClient;
         this.clienteRepository = clienteRepository;
     }
 
@@ -36,17 +40,42 @@ public class ClienteRestController {
 
         if (dniLimpio.matches("\\d{11}")) {
             Optional<Cliente> clienteOpt = clienteRepository.findByDni(dniLimpio);
+            Optional<SunatRucDTO> rucOpt = sunatClient.buscarPorRuc(dniLimpio);
+
+            String razonSocial = rucOpt.map(SunatRucDTO::getRazonSocial)
+                    .orElseGet(() -> clienteOpt.map(Cliente::getNombreCompleto).orElse(obtenerNombreEmpresaDemo(dniLimpio)));
+            String direccion = rucOpt.map(SunatRucDTO::getDireccion).orElse("Dirección fiscal registrada en SUNAT");
+            String repNombre = rucOpt.map(SunatRucDTO::getRepresentanteNombre).orElse("Representante Legal");
+            String repDoc = rucOpt.map(SunatRucDTO::getRepresentanteDocumento).orElse("-");
+            String repCargo = rucOpt.map(SunatRucDTO::getRepresentanteCargo).orElse("GERENTE GENERAL");
+            String estadoSunat = rucOpt.map(SunatRucDTO::getEstado).orElse("ACTIVO");
+            String condicionSunat = rucOpt.map(SunatRucDTO::getCondicion).orElse("HABIDO");
+
             boolean elegible = true;
             String motivoRechazo = null;
             if (clienteOpt.isPresent() && clienteOpt.get().getEstado() != EstadoCliente.ACTIVO) {
                 elegible = false;
                 motivoRechazo = "La empresa se encuentra en estado " + clienteOpt.get().getEstado() + " en la financiera.";
+            } else if (rucOpt.isPresent() && (!rucOpt.get().isActivo() || !rucOpt.get().isHabido())) {
+                if (!rucOpt.get().isHabido()) {
+                    elegible = false;
+                    motivoRechazo = "La empresa figura con condición " + condicionSunat + " en SUNAT (debe ser HABIDO).";
+                } else if (!rucOpt.get().isActivo()) {
+                    elegible = false;
+                    motivoRechazo = "La empresa figura en estado " + estadoSunat + " en SUNAT (debe estar ACTIVO).";
+                }
             }
-            String nombreEmpresa = clienteOpt.map(Cliente::getNombreCompleto).orElse(obtenerNombreEmpresaDemo(dniLimpio));
 
             Map<String, Object> respuesta = new LinkedHashMap<>();
             respuesta.put("dni", dniLimpio);
-            respuesta.put("nombreCompleto", nombreEmpresa);
+            respuesta.put("nombreCompleto", razonSocial);
+            respuesta.put("razonSocial", razonSocial);
+            respuesta.put("direccion", direccion);
+            respuesta.put("estadoSunat", estadoSunat);
+            respuesta.put("condicionSunat", condicionSunat);
+            respuesta.put("representanteNombre", repNombre);
+            respuesta.put("representanteDocumento", repDoc);
+            respuesta.put("representanteCargo", repCargo);
             respuesta.put("nacionalidad", "PERUANA");
             respuesta.put("dniVigente", true);
             respuesta.put("fallecido", false);

@@ -77,6 +77,9 @@ class RucPrestamoIntegrationTest {
         assertThat(body).isNotNull();
         assertThat(body.get("dni")).isEqualTo(RUC_LOS_ANDES);
         assertThat(body.get("nombreCompleto")).isEqualTo(RAZON_SOCIAL);
+        assertThat(body.get("representanteNombre")).isEqualTo("CARLOS ALBERTO MENDOZA RUIZ");
+        assertThat(body.get("representanteCargo")).isEqualTo("GERENTE GENERAL");
+        assertThat(body.get("direccion")).isEqualTo("Av. Industrial 456, Trujillo");
         assertThat(body.get("elegible")).isEqualTo(true);
     }
 
