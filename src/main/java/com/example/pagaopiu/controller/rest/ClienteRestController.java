@@ -28,11 +28,37 @@ public class ClienteRestController {
 
     @GetMapping("/buscar")
     public ResponseEntity<?> buscar(@RequestParam("dni") String dni) {
-        if (dni == null || !dni.trim().matches("\\d{8}")) {
-            return ResponseEntity.badRequest().body(Map.of("error", "El DNI debe tener exactamente 8 dígitos numéricos."));
+        if (dni == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "El documento es obligatorio."));
         }
 
         String dniLimpio = dni.trim();
+
+        if (dniLimpio.matches("\\d{11}")) {
+            Optional<Cliente> clienteOpt = clienteRepository.findByDni(dniLimpio);
+            boolean elegible = true;
+            String motivoRechazo = null;
+            if (clienteOpt.isPresent() && clienteOpt.get().getEstado() != EstadoCliente.ACTIVO) {
+                elegible = false;
+                motivoRechazo = "La empresa se encuentra en estado " + clienteOpt.get().getEstado() + " en la financiera.";
+            }
+            String nombreEmpresa = clienteOpt.map(Cliente::getNombreCompleto).orElse(obtenerNombreEmpresaDemo(dniLimpio));
+
+            Map<String, Object> respuesta = new LinkedHashMap<>();
+            respuesta.put("dni", dniLimpio);
+            respuesta.put("nombreCompleto", nombreEmpresa);
+            respuesta.put("nacionalidad", "PERUANA");
+            respuesta.put("dniVigente", true);
+            respuesta.put("fallecido", false);
+            respuesta.put("clienteEstado", clienteOpt.map(c -> c.getEstado().name()).orElse(null));
+            respuesta.put("elegible", elegible);
+            respuesta.put("motivoRechazo", motivoRechazo);
+            return ResponseEntity.ok(respuesta);
+        }
+
+        if (!dniLimpio.matches("\\d{8}")) {
+            return ResponseEntity.badRequest().body(Map.of("error", "El documento debe ser un DNI de 8 dígitos o un RUC de 11 dígitos."));
+        }
         Optional<ReniecPadron> padronOpt = reniecClient.buscarPorDni(dniLimpio);
         if (padronOpt.isEmpty()) {
             return ResponseEntity.status(404).body(Map.of("error", "No se encontró registro para el DNI en el padrón de RENIEC."));
@@ -69,5 +95,18 @@ public class ClienteRestController {
         respuesta.put("motivoRechazo", motivoRechazo);
 
         return ResponseEntity.ok(respuesta);
+    }
+
+    private String obtenerNombreEmpresaDemo(String ruc) {
+        if ("20987654321".equals(ruc)) {
+            return "COMERCIAL LOS ANDES S.A.C.";
+        } else if ("20123456789".equals(ruc)) {
+            return "PRÉSTAMOS DEL NORTE S.A.C.";
+        } else if ("20555666771".equals(ruc)) {
+            return "DISTRIBUIDORA NORTEÑA S.R.L.";
+        } else if ("20444333221".equals(ruc)) {
+            return "SERVICIOS LOGÍSTICOS INTEGRALES S.A.C.";
+        }
+        return "EMPRESA RUC " + ruc + " S.A.C.";
     }
 }

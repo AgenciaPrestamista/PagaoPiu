@@ -31,8 +31,7 @@ public class Cliente {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @JdbcTypeCode(SqlTypes.CHAR)
-    @Column(nullable = false, unique = true, length = 8)
+    @Column(nullable = false, unique = true, length = 20)
     private String dni;
 
     @Column(name = "nombre_completo", nullable = false, length = 300)

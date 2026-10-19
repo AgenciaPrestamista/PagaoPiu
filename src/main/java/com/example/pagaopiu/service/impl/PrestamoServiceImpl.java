@@ -137,27 +137,35 @@ public class PrestamoServiceImpl implements PrestamoService {
         }
 
         String dni = dto.getDni().trim();
+        boolean esRuc = dni.length() == 11;
+        ReniecPadron padron = null;
 
-        Optional<ReniecPadron> padronOpt = reniecClient.buscarPorDni(dni);
-        if (padronOpt.isEmpty()) {
-            throw new NegocioException("El DNI no se encuentra registrado en el padrón de RENIEC.");
-        }
-        ReniecPadron padron = padronOpt.get();
+        if (esRuc) {
+            if (!dni.matches("\\d{11}")) {
+                throw new NegocioException("El RUC debe contener exactamente 11 dígitos numéricos.");
+            }
+        } else {
+            Optional<ReniecPadron> padronOpt = reniecClient.buscarPorDni(dni);
+            if (padronOpt.isEmpty()) {
+                throw new NegocioException("El DNI no se encuentra registrado en el padrón de RENIEC.");
+            }
+            padron = padronOpt.get();
 
-        if (!padron.isDniVigente()) {
-            throw new NegocioException("El DNI no se encuentra vigente en RENIEC.");
-        }
-        if (padron.isFallecido()) {
-            throw new NegocioException("La persona se encuentra registrada como fallecida en RENIEC.");
-        }
-        if (!"PERUANA".equalsIgnoreCase(padron.getNacionalidad())) {
-            throw new NegocioException("La persona no posee nacionalidad peruana.");
-        }
+            if (!padron.isDniVigente()) {
+                throw new NegocioException("El DNI no se encuentra vigente en RENIEC.");
+            }
+            if (padron.isFallecido()) {
+                throw new NegocioException("La persona se encuentra registrada como fallecida en RENIEC.");
+            }
+            if (!"PERUANA".equalsIgnoreCase(padron.getNacionalidad())) {
+                throw new NegocioException("La persona no posee nacionalidad peruana.");
+            }
 
-        String nombreDtoNormalizado = Normalizer.normalize(dto.getNombreCliente().trim(), Normalizer.Form.NFC);
-        String nombrePadronNormalizado = Normalizer.normalize(padron.getNombreCompleto().trim(), Normalizer.Form.NFC);
-        if (!nombreDtoNormalizado.equals(nombrePadronNormalizado)) {
-            throw new NegocioException("El nombre no coincide exactamente con el registrado en RENIEC.");
+            String nombreDtoNormalizado = Normalizer.normalize(dto.getNombreCliente().trim(), Normalizer.Form.NFC);
+            String nombrePadronNormalizado = Normalizer.normalize(padron.getNombreCompleto().trim(), Normalizer.Form.NFC);
+            if (!nombreDtoNormalizado.equals(nombrePadronNormalizado)) {
+                throw new NegocioException("El nombre no coincide exactamente con el registrado en RENIEC.");
+            }
         }
 
         if (dto.getPlazoMeses() < 1 || dto.getPlazoMeses() > 60) {
@@ -175,14 +183,16 @@ public class PrestamoServiceImpl implements PrestamoService {
 
         if (dto.getFechaNacimiento() != null) {
             if (dto.getFechaNacimiento().isAfter(hoy)) {
-                throw new NegocioException("La fecha de nacimiento no puede ser futura.");
+                throw new NegocioException(esRuc ? "La fecha de constitución no puede ser futura." : "La fecha de nacimiento no puede ser futura.");
             }
-            int edad = Period.between(dto.getFechaNacimiento(), hoy).getYears();
-            if (edad < 18) {
-                throw new NegocioException("El cliente debe ser mayor de edad (mínimo 18 años) para ser registrado en el sistema.");
-            }
-            if (edad > 80) {
-                throw new NegocioException("La edad máxima permitida para solicitar un préstamo es de 80 años (el cliente tiene " + edad + " años).");
+            if (!esRuc) {
+                int edad = Period.between(dto.getFechaNacimiento(), hoy).getYears();
+                if (edad < 18) {
+                    throw new NegocioException("El cliente debe ser mayor de edad (mínimo 18 años) para ser registrado en el sistema.");
+                }
+                if (edad > 80) {
+                    throw new NegocioException("La edad máxima permitida para solicitar un préstamo es de 80 años (el cliente tiene " + edad + " años).");
+                }
             }
         }
 
@@ -191,8 +201,9 @@ public class PrestamoServiceImpl implements PrestamoService {
         if (optCliente.isPresent()) {
             cliente = optCliente.get();
         } else {
+            String nombreAGuardar = esRuc ? dto.getNombreCliente().trim() : padron.getNombreCompleto();
             try {
-                cliente = clienteRegistroHelper.insertarNuevoCliente(dni, padron.getNombreCompleto());
+                cliente = clienteRegistroHelper.insertarNuevoCliente(dni, nombreAGuardar);
                 cliente = clienteRepository.findByDniWithLock(dni).orElse(cliente);
             } catch (DataIntegrityViolationException ex) {
                 cliente = clienteRepository.findByDniWithLock(dni)
