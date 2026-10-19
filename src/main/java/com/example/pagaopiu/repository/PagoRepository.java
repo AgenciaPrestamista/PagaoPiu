@@ -14,13 +14,13 @@ import org.springframework.stereotype.Repository;
 public interface PagoRepository extends JpaRepository<Pago, Long> {
 
     @Override
-    @EntityGraph(attributePaths = {"sucursal", "usuario", "prestamo"})
+    @EntityGraph(attributePaths = {"sucursal", "usuario", "prestamo", "prestamo.cliente"})
     Optional<Pago> findById(Long id);
 
-    @EntityGraph(attributePaths = {"sucursal", "usuario", "prestamo"})
+    @EntityGraph(attributePaths = {"sucursal", "usuario", "prestamo", "prestamo.cliente"})
     List<Pago> findByPrestamoId(Long prestamoId);
 
-    @EntityGraph(attributePaths = {"sucursal", "usuario", "prestamo"})
+    @EntityGraph(attributePaths = {"sucursal", "usuario", "prestamo", "prestamo.cliente"})
     List<Pago> findBySucursalId(Long sucursalId);
 
     @Query("""
@@ -36,6 +36,6 @@ public interface PagoRepository extends JpaRepository<Pago, Long> {
     @Query(value = "SELECT nextval('seq_numero_factura')", nativeQuery = true)
     Long getNextFacturaSequence();
 
-    @EntityGraph(attributePaths = {"sucursal", "usuario", "prestamo"})
+    @EntityGraph(attributePaths = {"sucursal", "usuario", "prestamo", "prestamo.cliente"})
     Optional<Pago> findByNumeroComprobante(String numeroComprobante);
 }

@@ -205,14 +205,28 @@ public class PagoServiceImpl implements PagoService {
     @Override
     @Transactional(readOnly = true)
     public List<Pago> obtenerPagosPorPrestamoId(Long prestamoId) {
-        return pagoRepository.findByPrestamoId(prestamoId);
+        List<Pago> pagos = pagoRepository.findByPrestamoId(prestamoId);
+        for (Pago p : pagos) {
+            if (p.getPrestamo() != null && p.getPrestamo().getCliente() != null) {
+                org.hibernate.Hibernate.initialize(p.getPrestamo().getCliente());
+            }
+            if (p.getSucursal() != null) org.hibernate.Hibernate.initialize(p.getSucursal());
+            if (p.getUsuario() != null) org.hibernate.Hibernate.initialize(p.getUsuario());
+        }
+        return pagos;
     }
 
     @Override
     @Transactional(readOnly = true)
     public Pago obtenerPagoPorId(Long id) {
-        return pagoRepository.findById(id)
+        Pago pago = pagoRepository.findById(id)
                 .orElseThrow(() -> new NegocioException("Pago no encontrado con id: " + id));
+        if (pago.getPrestamo() != null && pago.getPrestamo().getCliente() != null) {
+            org.hibernate.Hibernate.initialize(pago.getPrestamo().getCliente());
+        }
+        if (pago.getSucursal() != null) org.hibernate.Hibernate.initialize(pago.getSucursal());
+        if (pago.getUsuario() != null) org.hibernate.Hibernate.initialize(pago.getUsuario());
+        return pago;
     }
 
     private void generarComprobante(Prestamo prestamo, Pago.PagoBuilder builder) {

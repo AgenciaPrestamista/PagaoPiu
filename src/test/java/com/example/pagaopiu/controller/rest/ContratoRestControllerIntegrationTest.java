@@ -206,12 +206,15 @@ public class ContratoRestControllerIntegrationTest {
                         .session(sessionAsesorTrujillo))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.impreso").value(true))
+                .andExpect(jsonPath("$.clienteDni").value("10000007"))
+                .andExpect(jsonPath("$.clienteNombre").value("Lucía Fernanda Sánchez Chávez"))
                 .andExpect(jsonPath("$.fechaImpresion").exists());
 
         // 4. Reimpresión permitida (POST /api/contratos/{id}/imprimir) -> 200 OK
         mockMvc.perform(post("/api/contratos/" + id + "/imprimir")
                         .session(sessionAsesorTrujillo))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clienteDni").value("10000007"))
                 .andExpect(jsonPath("$.impreso").value(true));
 
         // 5. Subir contrato firmado (POST /api/contratos/{id}/subir-firmado) -> 200 OK

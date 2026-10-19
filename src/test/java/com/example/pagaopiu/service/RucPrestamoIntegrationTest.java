@@ -22,6 +22,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.ResponseEntity;
 
+import com.example.pagaopiu.controller.rest.PagoRestController;
+import com.example.pagaopiu.dto.PagoResponseDTO;
+import java.util.List;
+
 @SpringBootTest
 class RucPrestamoIntegrationTest {
 
@@ -33,6 +37,9 @@ class RucPrestamoIntegrationTest {
 
     @Autowired
     private ClienteRestController clienteRestController;
+
+    @Autowired
+    private PagoRestController pagoRestController;
 
     @Autowired
     private PrestamoRepository prestamoRepository;
@@ -74,7 +81,7 @@ class RucPrestamoIntegrationTest {
     }
 
     @Test
-    @DisplayName("Debe registrar préstamo formalizado a empresa con RUC y emitir Factura Electrónica (F001)")
+    @DisplayName("Debe registrar préstamo formalizado a empresa con RUC y emitir Factura Electrónica (F001) y listar pagos sin LazyInitializationException")
     void testPrestamoYFacturaPorRuc() {
         LocalDate hoy = LocalDate.now(clock);
 
@@ -97,5 +104,14 @@ class RucPrestamoIntegrationTest {
         assertThat(pago).isNotNull();
         assertThat(pago.getTipoComprobante()).isEqualTo("FACTURA");
         assertThat(pago.getNumeroComprobante()).startsWith("F001-");
+
+        // Verificar que listarPagos de PagoRestController no lanza LazyInitializationException
+        ResponseEntity<List<PagoResponseDTO>> respPagos = pagoRestController.listarPagos(prestamo.getId());
+        assertThat(respPagos.getStatusCode().is2xxSuccessful()).isTrue();
+        List<PagoResponseDTO> listaDTO = respPagos.getBody();
+        assertThat(listaDTO).isNotEmpty();
+        assertThat(listaDTO.get(0).getClienteDocumento()).isEqualTo(RUC_LOS_ANDES);
+        assertThat(listaDTO.get(0).getClienteNombre()).isEqualTo(RAZON_SOCIAL);
+        assertThat(listaDTO.get(0).getTipoComprobante()).isEqualTo("FACTURA");
     }
 }

@@ -344,7 +344,8 @@ public class PrestamoServiceImpl implements PrestamoService {
 
         prestamo.setImpreso(true);
         prestamo.setFechaImpresion(LocalDateTime.now(clock));
-        return prestamoRepository.save(prestamo);
+        prestamoRepository.save(prestamo);
+        return obtenerPrestamoPorId(prestamoId);
     }
 
     @Override
@@ -370,7 +371,8 @@ public class PrestamoServiceImpl implements PrestamoService {
 
         prestamo.setEstado(EstadoPrestamo.ANULADO);
         prestamo.setMotivoAnulacion(motivo.trim());
-        return prestamoRepository.save(prestamo);
+        prestamoRepository.save(prestamo);
+        return obtenerPrestamoPorId(prestamoId);
     }
 
     @Override
@@ -433,7 +435,7 @@ public class PrestamoServiceImpl implements PrestamoService {
             estadoService.recalcularCliente(prestamo.getCliente());
         }
 
-        return prestamo;
+        return obtenerPrestamoPorId(prestamoId);
     }
 
     @Override
@@ -466,10 +468,18 @@ public class PrestamoServiceImpl implements PrestamoService {
         Usuario usuario = usuarioRepository.findByUsername(usernameAsesor)
                 .orElseThrow(() -> new NegocioException("Usuario no encontrado: " + usernameAsesor));
 
+        List<Prestamo> lista;
         if (usuario.getRol() == Rol.GERENTE || usuario.getSucursal() == null) {
-            return prestamoRepository.findByEstadoOrderByIdDesc(EstadoPrestamo.EN_ESPERA);
+            lista = prestamoRepository.findByEstadoOrderByIdDesc(EstadoPrestamo.EN_ESPERA);
+        } else {
+            lista = prestamoRepository.findBySucursalIdAndEstadoOrderByIdDesc(usuario.getSucursal().getId(), EstadoPrestamo.EN_ESPERA);
         }
-        return prestamoRepository.findBySucursalIdAndEstadoOrderByIdDesc(usuario.getSucursal().getId(), EstadoPrestamo.EN_ESPERA);
+        for (Prestamo p : lista) {
+            if (p.getCliente() != null) org.hibernate.Hibernate.initialize(p.getCliente());
+            if (p.getSucursal() != null) org.hibernate.Hibernate.initialize(p.getSucursal());
+            if (p.getAsesor() != null) org.hibernate.Hibernate.initialize(p.getAsesor());
+        }
+        return lista;
     }
 
     @Override
