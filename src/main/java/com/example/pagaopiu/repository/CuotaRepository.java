@@ -29,4 +29,6 @@ public interface CuotaRepository extends JpaRepository<Cuota, Long> {
           AND c.estado = com.example.pagaopiu.model.enums.EstadoCuota.PAGADA
     """)
     BigDecimal sumInteresCobradoBySucursalId(@Param("sucursalId") Long sucursalId);
+
+    List<Cuota> findByPagoId(Long pagoId);
 }

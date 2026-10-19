@@ -21,4 +21,13 @@ public class PagoResponseDTO {
     private LocalDate fechaPago;
     private BigDecimal monto;
     private String tipo;
+    private String numeroComprobante;
+    private String tipoComprobante;
+    private String clienteNombre;
+    private String clienteDocumento;
+    private String clienteDireccion;
+    private Integer cuotaNumero;
+    private BigDecimal montoCapital;
+    private BigDecimal montoInteres;
+    private BigDecimal saldoRestante;
 }

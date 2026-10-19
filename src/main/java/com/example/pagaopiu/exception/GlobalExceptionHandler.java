@@ -65,4 +65,9 @@ public class GlobalExceptionHandler {
 
         return "error";
     }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, String>> manejarMaxUploadSizeExceeded(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+        return ResponseEntity.badRequest().body(Map.of("error", "El archivo excede el tamaño máximo permitido de 5 MB."));
+    }
 }

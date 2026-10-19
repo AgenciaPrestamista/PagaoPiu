@@ -23,4 +23,9 @@ public interface PagoService {
      * Obtiene el listado de pagos registrados para un préstamo.
      */
     List<Pago> obtenerPagosPorPrestamoId(Long prestamoId);
+
+    /**
+     * Obtiene un pago por su ID con sus relaciones cargadas.
+     */
+    Pago obtenerPagoPorId(Long id);
 }

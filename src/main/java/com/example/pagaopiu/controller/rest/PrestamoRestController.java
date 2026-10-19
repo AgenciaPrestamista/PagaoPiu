@@ -2,11 +2,9 @@ package com.example.pagaopiu.controller.rest;
 
 import com.example.pagaopiu.dto.CuotaDetalle;
 import com.example.pagaopiu.dto.CuotaResponseDTO;
-import com.example.pagaopiu.dto.PrestamoRegistroDTO;
 import com.example.pagaopiu.dto.PrestamoResponseDTO;
 import com.example.pagaopiu.model.entity.Cuota;
 import com.example.pagaopiu.model.entity.Prestamo;
-import com.example.pagaopiu.security.UsuarioPrincipal;
 import com.example.pagaopiu.service.CronogramaCalculator;
 import com.example.pagaopiu.service.PrestamoService;
 import java.math.BigDecimal;
@@ -14,13 +12,9 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,15 +30,6 @@ public class PrestamoRestController {
     public PrestamoRestController(PrestamoService prestamoService, Clock clock) {
         this.prestamoService = prestamoService;
         this.clock = clock;
-    }
-
-    @PostMapping
-    public ResponseEntity<PrestamoResponseDTO> registrar(
-            @RequestBody PrestamoRegistroDTO dto,
-            @AuthenticationPrincipal UsuarioPrincipal principal) {
-        Prestamo prestamo = prestamoService.registrarPrestamo(dto, principal.getUsername());
-        List<Cuota> cuotas = prestamoService.obtenerCuotasPorPrestamoId(prestamo.getId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(mapToDTO(prestamo, cuotas));
     }
 
     @GetMapping("/{id}")
@@ -117,6 +102,10 @@ public class PrestamoRestController {
                 .cuotaFija(prestamo.getCuotaFija())
                 .estado(prestamo.getEstado().name())
                 .fechaCancelacion(prestamo.getFechaCancelacion())
+                .numeroContrato(prestamo.getNumeroContrato())
+                .impreso(prestamo.getImpreso())
+                .tieneContratoFirmado(prestamo.getContratoRuta() != null && !prestamo.getContratoRuta().isBlank())
+                .contratoNombreOriginal(prestamo.getContratoNombreOriginal())
                 .cuotas(cuotasDTO)
                 .build();
     }

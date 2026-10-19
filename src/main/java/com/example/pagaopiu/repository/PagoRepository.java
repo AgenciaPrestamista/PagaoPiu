@@ -29,4 +29,13 @@ public interface PagoRepository extends JpaRepository<Pago, Long> {
         WHERE p.sucursal.id = :sucursalId
     """)
     BigDecimal sumMontoBySucursalId(@Param("sucursalId") Long sucursalId);
+
+    @Query(value = "SELECT nextval('seq_numero_boleta')", nativeQuery = true)
+    Long getNextBoletaSequence();
+
+    @Query(value = "SELECT nextval('seq_numero_factura')", nativeQuery = true)
+    Long getNextFacturaSequence();
+
+    @EntityGraph(attributePaths = {"sucursal", "usuario", "prestamo"})
+    Optional<Pago> findByNumeroComprobante(String numeroComprobante);
 }

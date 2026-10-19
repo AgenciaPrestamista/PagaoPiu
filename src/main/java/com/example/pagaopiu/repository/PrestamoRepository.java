@@ -4,6 +4,7 @@ import com.example.pagaopiu.model.entity.Prestamo;
 import com.example.pagaopiu.model.enums.EstadoPrestamo;
 import jakarta.persistence.LockModeType;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -46,7 +47,7 @@ public interface PrestamoRepository extends JpaRepository<Prestamo, Long> {
         FROM Cuota c
         JOIN c.prestamo p
         WHERE p.cliente.id = :clienteId
-          AND p.estado <> com.example.pagaopiu.model.enums.EstadoPrestamo.CANCELADO
+          AND p.estado NOT IN (com.example.pagaopiu.model.enums.EstadoPrestamo.CANCELADO, com.example.pagaopiu.model.enums.EstadoPrestamo.ANULADO)
           AND c.estado = com.example.pagaopiu.model.enums.EstadoCuota.PENDIENTE
     """)
     BigDecimal findSaldoCapitalPendienteByClienteId(@Param("clienteId") Long clienteId);
@@ -55,7 +56,7 @@ public interface PrestamoRepository extends JpaRepository<Prestamo, Long> {
         SELECT COUNT(p)
         FROM Prestamo p
         WHERE p.sucursal.id = :sucursalId
-          AND p.estado <> com.example.pagaopiu.model.enums.EstadoPrestamo.CANCELADO
+          AND p.estado IN (com.example.pagaopiu.model.enums.EstadoPrestamo.VIGENTE, com.example.pagaopiu.model.enums.EstadoPrestamo.MOROSO, com.example.pagaopiu.model.enums.EstadoPrestamo.EXTRAJUDICIAL)
     """)
     long countActivosBySucursalId(@Param("sucursalId") Long sucursalId);
 
@@ -66,4 +67,23 @@ public interface PrestamoRepository extends JpaRepository<Prestamo, Long> {
           AND p.estado = :estado
     """)
     long countBySucursalIdAndEstado(@Param("sucursalId") Long sucursalId, @Param("estado") EstadoPrestamo estado);
+
+    @EntityGraph(attributePaths = {"cliente", "sucursal", "asesor"})
+    Optional<Prestamo> findByNumeroContrato(String numeroContrato);
+
+    boolean existsByContratoHash(String contratoHash);
+
+    boolean existsByClienteIdAndEstado(Long clienteId, EstadoPrestamo estado);
+
+    @EntityGraph(attributePaths = {"cliente", "sucursal", "asesor"})
+    List<Prestamo> findBySucursalIdAndEstadoOrderByIdDesc(Long sucursalId, EstadoPrestamo estado);
+
+    @EntityGraph(attributePaths = {"cliente", "sucursal", "asesor"})
+    List<Prestamo> findByEstadoOrderByIdDesc(EstadoPrestamo estado);
+
+    @EntityGraph(attributePaths = {"cliente", "sucursal", "asesor"})
+    List<Prestamo> findByEstadoAndFechaPrestamoBefore(EstadoPrestamo estado, LocalDate fecha);
+
+    @Query(value = "SELECT nextval('seq_numero_contrato')", nativeQuery = true)
+    Long getNextNumeroContratoSeq();
 }

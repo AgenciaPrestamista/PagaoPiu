@@ -14,6 +14,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -70,4 +71,36 @@ public class Prestamo {
 
     @Column(name = "fecha_cancelacion")
     private LocalDate fechaCancelacion;
+
+    @Column(name = "numero_contrato", unique = true, length = 30)
+    private String numeroContrato;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean impreso = false;
+
+    @Column(name = "fecha_impresion")
+    private LocalDateTime fechaImpresion;
+
+    @Column(name = "motivo_anulacion", length = 500)
+    private String motivoAnulacion;
+
+    @Column(name = "contrato_nombre_original", length = 255)
+    private String contratoNombreOriginal;
+
+    @Column(name = "contrato_ruta", length = 500)
+    private String contratoRuta;
+
+    @Column(name = "contrato_hash", length = 64)
+    private String contratoHash;
+
+    @Column(name = "contrato_content_type", length = 100)
+    private String contratoContentType;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "contrato_subido_por")
+    private Usuario contratoSubidoPor;
+
+    @Column(name = "contrato_fecha_subida")
+    private LocalDateTime contratoFechaSubida;
 }

@@ -288,4 +288,20 @@ class PagoIntegrationTest {
         // Los pagos deben ser 2 con IDs distintos
         assertThat(cuotas.get(0).getPago().getId()).isNotEqualTo(cuotas.get(1).getPago().getId());
     }
+
+    @Test
+    @DisplayName("Emisión de comprobante con correlativo único B001 para persona natural")
+    void testEmisionComprobante_Unico() {
+        Prestamo prestamo = crearPrestamoDemo("27427864", "CASTILLO TERRONES, JOSE PEDRO", new BigDecimal("1000.00"), 12, "asesor.trujillo");
+
+        Pago pago1 = pagoService.pagarSiguienteCuota(prestamo.getId(), "asesor.trujillo");
+        assertThat(pago1.getNumeroComprobante()).isNotNull();
+        assertThat(pago1.getNumeroComprobante()).startsWith("B001-");
+        assertThat(pago1.getTipoComprobante()).isEqualTo("BOLETA");
+
+        Pago pago2 = pagoService.pagarSiguienteCuota(prestamo.getId(), "asesor.trujillo");
+        assertThat(pago2.getNumeroComprobante()).isNotNull();
+        assertThat(pago2.getNumeroComprobante()).startsWith("B001-");
+        assertThat(pago2.getNumeroComprobante()).isNotEqualTo(pago1.getNumeroComprobante());
+    }
 }

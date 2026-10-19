@@ -4,5 +4,7 @@ public enum EstadoPrestamo {
     VIGENTE,
     MOROSO,
     EXTRAJUDICIAL,
-    CANCELADO
+    CANCELADO,
+    EN_ESPERA,
+    ANULADO
 }

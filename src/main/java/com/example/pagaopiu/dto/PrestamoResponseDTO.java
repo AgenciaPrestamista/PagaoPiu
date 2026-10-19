@@ -30,5 +30,9 @@ public class PrestamoResponseDTO {
     private BigDecimal cuotaFija;
     private String estado;
     private LocalDate fechaCancelacion;
+    private String numeroContrato;
+    private Boolean impreso;
+    private boolean tieneContratoFirmado;
+    private String contratoNombreOriginal;
     private List<CuotaResponseDTO> cuotas;
 }

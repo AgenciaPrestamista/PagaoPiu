@@ -54,4 +54,10 @@ public class Pago {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private TipoPago tipo;
+
+    @Column(name = "numero_comprobante", length = 30, unique = true)
+    private String numeroComprobante;
+
+    @Column(name = "tipo_comprobante", length = 20)
+    private String tipoComprobante;
 }

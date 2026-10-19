@@ -4,20 +4,16 @@ import com.example.pagaopiu.dto.PrestamoRegistroDTO;
 import com.example.pagaopiu.model.entity.Cuota;
 import com.example.pagaopiu.model.entity.Prestamo;
 import com.example.pagaopiu.model.entity.ReniecPadron;
-import com.example.pagaopiu.security.UsuarioPrincipal;
 import com.example.pagaopiu.service.PrestamoService;
 import com.example.pagaopiu.service.ReniecClient;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -51,14 +47,6 @@ public class PrestamoController {
 
         model.addAttribute("prestamo", dto);
         return "prestamo-registrar";
-    }
-
-    @PostMapping("/registrar")
-    public String procesarRegistroPrestamo(
-            @ModelAttribute("prestamo") PrestamoRegistroDTO dto,
-            @AuthenticationPrincipal UsuarioPrincipal principal) {
-        Prestamo prestamo = prestamoService.registrarPrestamo(dto, principal.getUsername());
-        return "redirect:/prestamo/" + prestamo.getId();
     }
 
     @GetMapping("/{id}")

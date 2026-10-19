@@ -44,6 +44,11 @@ public class EstadoServiceImpl implements EstadoService {
             return;
         }
 
+        // EN_ESPERA y ANULADO no se alteran con recálculo de morosidad
+        if (prestamo.getEstado() == EstadoPrestamo.EN_ESPERA || prestamo.getEstado() == EstadoPrestamo.ANULADO) {
+            return;
+        }
+
         // Si ya está CANCELADO, no cambia de estado
         if (prestamo.getEstado() == EstadoPrestamo.CANCELADO) {
             return;
@@ -106,13 +111,13 @@ public class EstadoServiceImpl implements EstadoService {
         }
 
         for (Prestamo p : prestamos) {
-            if (p.getEstado() != EstadoPrestamo.CANCELADO) {
+            if (p.getEstado() != EstadoPrestamo.CANCELADO && p.getEstado() != EstadoPrestamo.EN_ESPERA && p.getEstado() != EstadoPrestamo.ANULADO) {
                 recalcularPrestamo(p);
             }
         }
 
         List<Prestamo> prestamosActivos = prestamos.stream()
-                .filter(p -> p.getEstado() != EstadoPrestamo.CANCELADO)
+                .filter(p -> p.getEstado() != EstadoPrestamo.CANCELADO && p.getEstado() != EstadoPrestamo.EN_ESPERA && p.getEstado() != EstadoPrestamo.ANULADO)
                 .toList();
 
         // El estado del cliente es el PEOR de sus préstamos activos: EXTRAJUDICIAL > MOROSO > ACTIVO
@@ -136,13 +141,13 @@ public class EstadoServiceImpl implements EstadoService {
     }
 
     @Override
-    @Scheduled(cron = "${app.cron.recalculo-estados:0 0 1 * * *}")
+    @Scheduled(cron = "${app.cron.recalculo-estados:0 0 1 * * *}", zone = "America/Lima")
     @Transactional
     public void recalcularTodos() {
         // Recalcular todos los préstamos no cancelados
         List<Prestamo> todosPrestamos = prestamoRepository.findAll();
         for (Prestamo p : todosPrestamos) {
-            if (p.getEstado() != EstadoPrestamo.CANCELADO) {
+            if (p.getEstado() != EstadoPrestamo.CANCELADO && p.getEstado() != EstadoPrestamo.EN_ESPERA && p.getEstado() != EstadoPrestamo.ANULADO) {
                 recalcularPrestamo(p);
             }
         }

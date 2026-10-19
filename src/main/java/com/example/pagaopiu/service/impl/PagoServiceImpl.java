@@ -69,6 +69,12 @@ public class PagoServiceImpl implements PagoService {
         if (prestamo.getEstado() == EstadoPrestamo.CANCELADO) {
             throw new NegocioException("El préstamo ya se encuentra cancelado.");
         }
+        if (prestamo.getEstado() == EstadoPrestamo.EN_ESPERA) {
+            throw new NegocioException("El préstamo se encuentra en espera y aún no ha sido activado con su contrato firmado.");
+        }
+        if (prestamo.getEstado() == EstadoPrestamo.ANULADO) {
+            throw new NegocioException("El préstamo se encuentra anulado y no admite pagos.");
+        }
         if (prestamo.getEstado() == EstadoPrestamo.EXTRAJUDICIAL) {
             throw new NegocioException("El préstamo se encuentra en estado EXTRAJUDICIAL y no admite pagos.");
         }
@@ -92,15 +98,15 @@ public class PagoServiceImpl implements PagoService {
         LocalDate fechaPago = LocalDate.now(clock);
 
         // Crear registro de Pago
-        Pago pago = Pago.builder()
+        Pago.PagoBuilder pagoBuilder = Pago.builder()
                 .prestamo(prestamo)
                 .sucursal(sucursalCobro)
                 .usuario(asesor)
                 .fechaPago(fechaPago)
                 .monto(cuota.getMonto())
-                .tipo(TipoPago.CUOTA)
-                .build();
-        pago = pagoRepository.save(pago);
+                .tipo(TipoPago.CUOTA);
+        generarComprobante(prestamo, pagoBuilder);
+        Pago pago = pagoRepository.save(pagoBuilder.build());
 
         // Actualizar cuota a PAGADA y asociarla al pago
         cuota.setEstado(EstadoCuota.PAGADA);
@@ -134,6 +140,12 @@ public class PagoServiceImpl implements PagoService {
         if (prestamo.getEstado() == EstadoPrestamo.CANCELADO) {
             throw new NegocioException("El préstamo ya se encuentra cancelado.");
         }
+        if (prestamo.getEstado() == EstadoPrestamo.EN_ESPERA) {
+            throw new NegocioException("El préstamo se encuentra en espera y aún no ha sido activado con su contrato firmado.");
+        }
+        if (prestamo.getEstado() == EstadoPrestamo.ANULADO) {
+            throw new NegocioException("El préstamo se encuentra anulado y no admite pagos.");
+        }
         if (prestamo.getEstado() == EstadoPrestamo.EXTRAJUDICIAL) {
             throw new NegocioException("El préstamo se encuentra en estado EXTRAJUDICIAL y no admite pagos.");
         }
@@ -161,15 +173,15 @@ public class PagoServiceImpl implements PagoService {
         LocalDate fechaPago = LocalDate.now(clock);
 
         // Crear pago único tipo CANCELACION_ANTICIPADA
-        Pago pago = Pago.builder()
+        Pago.PagoBuilder pagoBuilder = Pago.builder()
                 .prestamo(prestamo)
                 .sucursal(sucursalCobro)
                 .usuario(asesor)
                 .fechaPago(fechaPago)
                 .monto(totalCancelar)
-                .tipo(TipoPago.CANCELACION_ANTICIPADA)
-                .build();
-        pago = pagoRepository.save(pago);
+                .tipo(TipoPago.CANCELACION_ANTICIPADA);
+        generarComprobante(prestamo, pagoBuilder);
+        Pago pago = pagoRepository.save(pagoBuilder.build());
 
         // Marcar todas las cuotas pendientes como PAGADA
         for (Cuota c : cuotasPendientes) {
@@ -194,5 +206,32 @@ public class PagoServiceImpl implements PagoService {
     @Transactional(readOnly = true)
     public List<Pago> obtenerPagosPorPrestamoId(Long prestamoId) {
         return pagoRepository.findByPrestamoId(prestamoId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Pago obtenerPagoPorId(Long id) {
+        return pagoRepository.findById(id)
+                .orElseThrow(() -> new NegocioException("Pago no encontrado con id: " + id));
+    }
+
+    private void generarComprobante(Prestamo prestamo, Pago.PagoBuilder builder) {
+        String dni = (prestamo.getCliente() != null && prestamo.getCliente().getDni() != null)
+                ? prestamo.getCliente().getDni().trim()
+                : "";
+        boolean esEmpresa = dni.length() == 11;
+        String tipo = esEmpresa ? "FACTURA" : "BOLETA";
+        String numeroComprobante;
+        try {
+            Long seq = esEmpresa ? pagoRepository.getNextFacturaSequence() : pagoRepository.getNextBoletaSequence();
+            if (seq != null) {
+                numeroComprobante = String.format(esEmpresa ? "F001-%06d" : "B001-%06d", seq);
+            } else {
+                numeroComprobante = String.format(esEmpresa ? "F001-%06d" : "B001-%06d", System.currentTimeMillis() % 1000000);
+            }
+        } catch (Exception ex) {
+            numeroComprobante = String.format(esEmpresa ? "F001-%06d" : "B001-%06d", System.currentTimeMillis() % 1000000);
+        }
+        builder.tipoComprobante(tipo).numeroComprobante(numeroComprobante);
     }
 }
