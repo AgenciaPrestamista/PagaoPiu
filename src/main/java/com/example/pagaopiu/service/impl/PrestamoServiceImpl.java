@@ -16,11 +16,13 @@ import com.example.pagaopiu.repository.ClienteRepository;
 import com.example.pagaopiu.repository.CuotaRepository;
 import com.example.pagaopiu.repository.PrestamoRepository;
 import com.example.pagaopiu.repository.UsuarioRepository;
+import com.example.pagaopiu.dto.sunat.SunatRucDTO;
 import com.example.pagaopiu.service.ContratoFileStorageService;
 import com.example.pagaopiu.service.CronogramaCalculator;
 import com.example.pagaopiu.service.EstadoService;
 import com.example.pagaopiu.service.PrestamoService;
 import com.example.pagaopiu.service.ReniecClient;
+import com.example.pagaopiu.service.SunatClient;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.Normalizer;
@@ -31,6 +33,7 @@ import java.time.Period;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -49,6 +52,7 @@ public class PrestamoServiceImpl implements PrestamoService {
     private final ClienteRepository clienteRepository;
     private final UsuarioRepository usuarioRepository;
     private final ReniecClient reniecClient;
+    private final SunatClient sunatClient;
     private final ClienteRegistroHelper clienteRegistroHelper;
     private final Clock clock;
     private final CronogramaCalculator cronogramaCalculator;
@@ -65,18 +69,19 @@ public class PrestamoServiceImpl implements PrestamoService {
 
     private final EstadoService estadoService;
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     public PrestamoServiceImpl(
             PrestamoRepository prestamoRepository,
             CuotaRepository cuotaRepository,
             ClienteRepository clienteRepository,
             UsuarioRepository usuarioRepository,
             ReniecClient reniecClient,
+            @Autowired(required = false) SunatClient sunatClient,
             ClienteRegistroHelper clienteRegistroHelper,
             Clock clock,
             EstadoService estadoService,
             ContratoFileStorageService contratoFileStorageService) {
-        this(prestamoRepository, cuotaRepository, clienteRepository, usuarioRepository, reniecClient, clienteRegistroHelper, clock, estadoService, new CronogramaCalculator(), contratoFileStorageService);
+        this(prestamoRepository, cuotaRepository, clienteRepository, usuarioRepository, reniecClient, sunatClient, clienteRegistroHelper, clock, estadoService, new CronogramaCalculator(), contratoFileStorageService);
     }
 
     public PrestamoServiceImpl(
@@ -88,7 +93,7 @@ public class PrestamoServiceImpl implements PrestamoService {
             ClienteRegistroHelper clienteRegistroHelper,
             Clock clock,
             CronogramaCalculator cronogramaCalculator) {
-        this(prestamoRepository, cuotaRepository, clienteRepository, usuarioRepository, reniecClient, clienteRegistroHelper, clock, null, cronogramaCalculator, null);
+        this(prestamoRepository, cuotaRepository, clienteRepository, usuarioRepository, reniecClient, null, clienteRegistroHelper, clock, null, cronogramaCalculator, null);
     }
 
     public PrestamoServiceImpl(
@@ -97,6 +102,7 @@ public class PrestamoServiceImpl implements PrestamoService {
             ClienteRepository clienteRepository,
             UsuarioRepository usuarioRepository,
             ReniecClient reniecClient,
+            SunatClient sunatClient,
             ClienteRegistroHelper clienteRegistroHelper,
             Clock clock,
             EstadoService estadoService,
@@ -107,6 +113,7 @@ public class PrestamoServiceImpl implements PrestamoService {
         this.clienteRepository = clienteRepository;
         this.usuarioRepository = usuarioRepository;
         this.reniecClient = reniecClient;
+        this.sunatClient = sunatClient;
         this.clienteRegistroHelper = clienteRegistroHelper;
         this.clock = clock;
         this.estadoService = estadoService;
@@ -143,6 +150,9 @@ public class PrestamoServiceImpl implements PrestamoService {
         if (esRuc) {
             if (!dni.matches("\\d{11}")) {
                 throw new NegocioException("El RUC debe contener exactamente 11 dígitos numéricos.");
+            }
+            if (!dni.startsWith("10") && !dni.startsWith("20")) {
+                throw new NegocioException("El RUC debe comenzar con 10 (persona natural con negocio) o 20 (persona jurídica/empresa).");
             }
         } else {
             Optional<ReniecPadron> padronOpt = reniecClient.buscarPorDni(dni);
@@ -308,12 +318,61 @@ public class PrestamoServiceImpl implements PrestamoService {
             throw new NegocioException("La fecha de emisión del contrato debe ser exactamente la fecha actual del sistema.");
         }
 
+        String dniDoc = (dto != null && dto.getDni() != null) ? dto.getDni().trim() : "";
+        String empresaRazonSocial = null;
+        String empresaRuc = null;
+        String repNombre = null;
+        String repDoc = null;
+        String repCargo = null;
+
+        if (dniDoc.length() == 11 && !dniDoc.startsWith("10") && !dniDoc.startsWith("20")) {
+            throw new NegocioException("El RUC debe comenzar con 10 (persona natural con negocio) o 20 (persona jurídica/empresa).");
+        }
+
+        if (dniDoc.length() == 11 && dniDoc.startsWith("20")) {
+            if (sunatClient == null) {
+                throw new NegocioException("El servicio de consulta SUNAT no se encuentra disponible.");
+            }
+            Optional<SunatRucDTO> rucOpt;
+            try {
+                rucOpt = sunatClient.buscarPorRuc(dniDoc);
+            } catch (Exception ex) {
+                throw new NegocioException("No se pudo consultar SUNAT, intente nuevamente.");
+            }
+            if (rucOpt.isEmpty()) {
+                throw new NegocioException("No se encontró información de la empresa en SUNAT para el RUC: " + dniDoc);
+            }
+            SunatRucDTO sunat = rucOpt.get();
+            if (!sunat.isActivo()) {
+                throw new NegocioException("La empresa figura en estado " + sunat.getEstado() + " en SUNAT (debe estar ACTIVO).");
+            }
+            if (!sunat.isHabido()) {
+                throw new NegocioException("La empresa figura con condición " + sunat.getCondicion() + " en SUNAT (debe ser HABIDO).");
+            }
+            if (sunat.getRazonSocial() == null || sunat.getRazonSocial().isBlank()
+                    || sunat.getRepresentanteNombre() == null || sunat.getRepresentanteNombre().isBlank()
+                    || sunat.getRepresentanteDocumento() == null || sunat.getRepresentanteDocumento().isBlank()
+                    || sunat.getRepresentanteCargo() == null || sunat.getRepresentanteCargo().isBlank()) {
+                throw new NegocioException("La empresa no cuenta con información completa del representante legal en SUNAT.");
+            }
+            empresaRuc = dniDoc;
+            empresaRazonSocial = sunat.getRazonSocial().trim();
+            repNombre = sunat.getRepresentanteNombre().trim();
+            repDoc = sunat.getRepresentanteDocumento().trim();
+            repCargo = sunat.getRepresentanteCargo().trim();
+        }
+
         ContextoPrestamo ctx = validarSolicitudYBloquearCliente(dto, usernameAsesor, false);
         String numeroContrato = generarNumeroContratoCorrelativo();
 
+        com.example.pagaopiu.model.entity.Sucursal sucursal = ctx.asesor().getSucursal();
+        if (sucursal == null) {
+            throw new NegocioException("El asesor autenticado no tiene una sucursal asignada.");
+        }
+
         Prestamo prestamo = Prestamo.builder()
                 .cliente(ctx.cliente())
-                .sucursal(ctx.asesor().getSucursal())
+                .sucursal(sucursal)
                 .asesor(ctx.asesor())
                 .fechaPrestamo(ctx.fechaPrestamo())
                 .capital(ctx.monto())
@@ -324,6 +383,11 @@ public class PrestamoServiceImpl implements PrestamoService {
                 .estado(EstadoPrestamo.EN_ESPERA)
                 .impreso(false)
                 .numeroContrato(numeroContrato)
+                .empresaRazonSocial(empresaRazonSocial)
+                .empresaRuc(empresaRuc)
+                .empresaRepresentanteNombre(repNombre)
+                .empresaRepresentanteDocumento(repDoc)
+                .empresaRepresentanteCargo(repCargo)
                 .build();
 
         prestamo = prestamoRepository.save(prestamo);

@@ -22,7 +22,11 @@ public class SunatClientApiImpl implements SunatClient {
             @Value("${app.sunat.api.url:https://api.json.pe/api}") String apiUrl,
             @Value("${app.reniec.api.token:}") String apiToken) {
         this.apiToken = apiToken != null ? apiToken.trim() : "";
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(java.time.Duration.ofSeconds(5));
+        factory.setReadTimeout(java.time.Duration.ofSeconds(10));
         this.restClient = RestClient.builder()
+                .requestFactory(factory)
                 .baseUrl(apiUrl)
                 .defaultHeader("Authorization", "Bearer " + this.apiToken)
                 .defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)

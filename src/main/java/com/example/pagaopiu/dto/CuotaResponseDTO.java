@@ -23,4 +23,5 @@ public class CuotaResponseDTO {
     private BigDecimal saldoCapital;
     private String estado;
     private Long pagoId;
+    private BigDecimal saldoInicial;
 }

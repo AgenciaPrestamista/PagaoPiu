@@ -8,7 +8,10 @@ import com.example.pagaopiu.dto.PrestamoRegistroDTO;
 import com.example.pagaopiu.model.entity.Cuota;
 import com.example.pagaopiu.model.entity.Prestamo;
 import com.example.pagaopiu.security.UsuarioPrincipal;
+import com.example.pagaopiu.service.ContratoDocumentoService;
 import com.example.pagaopiu.service.PrestamoService;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -33,9 +36,11 @@ import org.springframework.web.multipart.MultipartFile;
 public class ContratoRestController {
 
     private final PrestamoService prestamoService;
+    private final ContratoDocumentoService contratoDocumentoService;
 
-    public ContratoRestController(PrestamoService prestamoService) {
+    public ContratoRestController(PrestamoService prestamoService, ContratoDocumentoService contratoDocumentoService) {
         this.prestamoService = prestamoService;
+        this.contratoDocumentoService = contratoDocumentoService;
     }
 
     @PostMapping("/generar")
@@ -113,6 +118,19 @@ public class ContratoRestController {
                 .body(recurso);
     }
 
+    @GetMapping("/firma-gerente")
+    public ResponseEntity<Resource> obtenerFirmaGerente() {
+        if (!contratoDocumentoService.tieneFirmaGerente()) {
+            return ResponseEntity.notFound().build();
+        }
+        Resource recurso = contratoDocumentoService.obtenerRecursoFirmaGerente();
+        String contentType = contratoDocumentoService.obtenerContentTypeFirma();
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CACHE_CONTROL, "public, max-age=3600")
+                .body(recurso);
+    }
+
     @GetMapping("/en-espera")
     public ResponseEntity<List<ContratoResponseDTO>> listarContratosEnEspera(
             @AuthenticationPrincipal UsuarioPrincipal principal) {
@@ -149,18 +167,29 @@ public class ContratoRestController {
 
     private ContratoDetalleResponseDTO mapToDetalleDTO(Prestamo prestamo, List<Cuota> cuotas) {
         List<CuotaResponseDTO> cuotasDTO = cuotas.stream()
-                .map(c -> CuotaResponseDTO.builder()
-                        .id(c.getId())
-                        .numero(c.getNumero())
-                        .fechaVencimiento(c.getFechaVencimiento())
-                        .capital(c.getCapital())
-                        .interes(c.getInteres())
-                        .monto(c.getMonto())
-                        .saldoCapital(c.getSaldoCapital())
-                        .estado(c.getEstado().name())
-                        .pagoId(c.getPago() != null ? c.getPago().getId() : null)
-                        .build())
+                .map(c -> {
+                    BigDecimal saldoInicial = (c.getSaldoCapital() != null && c.getCapital() != null)
+                            ? c.getSaldoCapital().add(c.getCapital())
+                            : null;
+                    return CuotaResponseDTO.builder()
+                            .id(c.getId())
+                            .numero(c.getNumero())
+                            .fechaVencimiento(c.getFechaVencimiento())
+                            .capital(c.getCapital())
+                            .interes(c.getInteres())
+                            .monto(c.getMonto())
+                            .saldoCapital(c.getSaldoCapital())
+                            .saldoInicial(saldoInicial)
+                            .estado(c.getEstado().name())
+                            .pagoId(c.getPago() != null ? c.getPago().getId() : null)
+                            .build();
+                })
                 .toList();
+
+        ContratoDocumentoService.ContratoTextoDTO textoDTO = contratoDocumentoService.generarTextoContrato(prestamo);
+        BigDecimal temPorcentajeCuatroDecimales = prestamo.getTem() != null
+                ? prestamo.getTem().multiply(new BigDecimal("100")).setScale(4, RoundingMode.HALF_UP)
+                : null;
 
         return ContratoDetalleResponseDTO.builder()
                 .id(prestamo.getId())
@@ -186,6 +215,18 @@ public class ContratoRestController {
                 .contratoNombreOriginal(prestamo.getContratoNombreOriginal())
                 .fechaSubidaContrato(prestamo.getContratoFechaSubida())
                 .cuotas(cuotasDTO)
+                .textoContrato(textoDTO.textoContrato())
+                .bloqueFirmas(textoDTO.bloqueFirmas())
+                .tieneFirmaGerente(contratoDocumentoService.tieneFirmaGerente())
+                .temPorcentajeCuatroDecimales(temPorcentajeCuatroDecimales)
+                .ciudadContrato(textoDTO.ciudad())
+                .fechaEmisionFormateada(textoDTO.fechaEmisionFormateada())
+                .emisorRazonSocial(textoDTO.emisorRazonSocial())
+                .empresaRazonSocial(prestamo.getEmpresaRazonSocial())
+                .empresaRuc(prestamo.getEmpresaRuc())
+                .empresaRepresentanteNombre(prestamo.getEmpresaRepresentanteNombre())
+                .empresaRepresentanteDocumento(prestamo.getEmpresaRepresentanteDocumento())
+                .empresaRepresentanteCargo(prestamo.getEmpresaRepresentanteCargo())
                 .build();
     }
 }

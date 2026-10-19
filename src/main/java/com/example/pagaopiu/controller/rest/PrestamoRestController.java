@@ -73,17 +73,22 @@ public class PrestamoRestController {
 
     private PrestamoResponseDTO mapToDTO(Prestamo prestamo, List<Cuota> cuotas) {
         List<CuotaResponseDTO> cuotasDTO = cuotas.stream()
-                .map(c -> CuotaResponseDTO.builder()
-                        .id(c.getId())
-                        .numero(c.getNumero())
-                        .fechaVencimiento(c.getFechaVencimiento())
-                        .capital(c.getCapital())
-                        .interes(c.getInteres())
-                        .monto(c.getMonto())
-                        .saldoCapital(c.getSaldoCapital())
-                        .estado(c.getEstado().name())
-                        .pagoId(c.getPago() != null ? c.getPago().getId() : null)
-                        .build())
+                .map(c -> {
+                    BigDecimal saldoInicial = (c.getSaldoCapital() != null && c.getCapital() != null)
+                            ? c.getSaldoCapital().add(c.getCapital()) : null;
+                    return CuotaResponseDTO.builder()
+                            .id(c.getId())
+                            .numero(c.getNumero())
+                            .fechaVencimiento(c.getFechaVencimiento())
+                            .capital(c.getCapital())
+                            .interes(c.getInteres())
+                            .monto(c.getMonto())
+                            .saldoCapital(c.getSaldoCapital())
+                            .saldoInicial(saldoInicial)
+                            .estado(c.getEstado().name())
+                            .pagoId(c.getPago() != null ? c.getPago().getId() : null)
+                            .build();
+                })
                 .toList();
 
         return PrestamoResponseDTO.builder()

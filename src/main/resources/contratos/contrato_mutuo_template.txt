@@ -1,0 +1,111 @@
+CONTRATO DE MUTUO DINERARIO Nº {{NUMERO_CONTRATO}}
+
+Conste por el presente documento CONTRATO PRIVADO DE MUTUO DINERARIO que celebran de una parte {{EMISOR_RAZON_SOCIAL}}, con RUC Nº {{EMISOR_RUC}}, representada por {{EMISOR_REPRESENTANTE}}, conforme facultades de representación inscritas en el Registro de Personas Jurídicas de la {{EMISOR_PARTIDA}};  quien adelante se le denominará “EFS”; y, de la otra parte, {{FRAGMENTO_CLIENTE}}
+
+CLÁUSULA PRIMERA.- DE LOS OTORGANTES
+
+A) EFS, es una persona jurídica inscrita en el “Registro de empresas y personas que efectúan operaciones financieras o de cambio de moneda”, la cual se dedica a la concesión de préstamos fuera del sistema bancario, entre otros, los cuales se encuentran especificados en su objeto social, conforme Escritura Pública de Constitución societaria, de fecha 27 de diciembre de 2019. B) EL CLIENTE, persona natural o jurídica que requiere uno o más servicios que presta EFS.
+
+CLÁUSULA SEGUNDA.- OBJETO
+
+EL CLIENTE solicita un préstamo dinerario a EFS, brindando información y documentación; por lo que, EL CLIENTE declara que recibe la información del préstamo a la firma del presente documento, en señal de conformidad por haber recibido el monto total del préstamo solicitado.
+
+CLÁUSULA TERCERA.- MODALIDAD DE DESEMBOLSO
+
+La entrega el total de dinero es de manera presencial en las agencias de EFS y se dejará constancia a través de este documento donde EL CLIENTE declara haber recibido conforme.
+
+CLÁUSULA CUARTA.- INTERESES
+
+EFS aplica las normas generales del Código Civil y se respetan los límites fijados para el pago de intereses hasta la cancelación total del préstamo, siendo la tasa máxima del interés convencional compensatorio o moratorio, la fijada por el Banco Central de Reserva del Perú.
+
+En caso de incumplimiento, EL CLIENTE cancelará adicionalmente a los intereses moratorios y/o la penalidad pactada por los días de retraso. Los pagos se aplicarán a la deuda en el orden siguiente: las cuotas vencidas y de la cuota vigente. En caso de incumplimiento, total o parcial, de cualquiera de las obligaciones a cargo de EL CLIENTE incurrirán en mora automáticamente, sin necesidad de aviso judicial.
+
+En ningún caso la terminación anticipada de servicios o resolución de contrato dará lugar a la devolución de los conceptos por comisión, o gastos por servicio que hayan sido cobrados y efectivamente prestados.
+
+CLÁUSULA QUINTA.- DE LAS MODIFICACIONES UNILATERALES
+
+EFS y EL CLIENTE acuerdan expresamente que ante cambios en las condiciones del mercado, régimen regulatorio, cambios en la economía nacional o internacional, crisis financiera, cambios en el mercado o la competencia, políticas de gobierno que impacte de forma negativa a EFS, hechos fortuitos o causas de fuerza mayor, guerra, comunismo, terrorismo o análogos, EFS podrá variar las intereses, condiciones, gastos, penalidades pactadas con motivo del presente contrato, por ende la TCEA y otros aspectos contractuales legalmente permitidos, debiendo ser comunicado a EL CLIENTE, siendo que si no está de acuerdo, es causal de resolución del presente contrato previo pago del total de la obligación a la fecha, debiendo comunicarlo en el lapso de 72 horas, mediante i) comunicación física a EFS, manifestando su disconformidad y voluntad expresa de resolver el contrato y ii) proceder al pago de todo el saldo deudor, liquidación que mantuviere pendiente y practicará EFS, de no ejercer EL CLIENTE su derecho, se entiende que acepta tales modificaciones.
+
+Lo descrito en el párrafo precedente no aplica para modificaciones en beneficio de EL CLIENTE.
+
+CLÁUSULA SEXTA.- REUTILIZACIÓN DE CAPITAL CANCELADO Y AMPLIACIÓN DE PRESTAMO
+
+EFS podrá, conforme a sus políticas internas y normativa aplicable, otorgarle a EL CLIENTE, cuando este los solicite o acepte, nuevos préstamos, así como ampliaciones de préstamo, según corresponda, para lo cual EL CLIENTE tendrá que pagar las obligaciones derivadas del Préstamo originalmente solicitado.
+
+CLÁUSULA SÉPTIMA.- DE LAS COMUNICACIONES
+
+EL CLIENTE tiene la obligación de declarar sus datos personales reales, personales y vigentes; por lo que, EFS no se responsabiliza por variaciones en los mismos. En el caso que EL CLIENTE cambie algún dato personal, deberá comunicarlo inmediatamente a EFS, debiendo apersonarse a la oficina en la que fue atendido, llenando un “formulario de actualización de datos”, a partir de lo cual entra en vigencia dicha información, surtiendo los efectos legales, para cualquier información que EFS requiera remitir a EL CLIENTE.
+
+Si el cliente requiere información de modo físico, deberá apersonarse a la oficina de EFS, y, a su costo, se le entregará la documentación requerida.
+
+CLÁUSULA OCTAVA.- PLAZO Y MEDIO DE PAGO
+
+El Préstamo será cancelado por EL CLIENTE con el pago total de la obligación adeudada, en los plazos y montos pactados; con la frecuencia que se señala en su cronograma de pagos
+
+Las formas de pago por las que EL CLIENTE podrá efectuar los pagos serán:
+
+- Pagos en efectivo, en la agencia de su preferencia.
+
+- Pago con billetera digital
+
+- Deposito Bancario
+
+En cuanto EL CLIENTE realice el abono a la cuenta de EFS, deberá poner en conocimiento con EFS, presentando su voucher o constancia de pago original; caso contrario, EFS no se responsabiliza por la actualización inmediata de la deuda de EL CLIENTE.
+
+Si el cliente realiza abonos mediante transferencias interbancaria, debe considerar para el pago de su cuota, los intereses calculados desde la fecha efectiva de ingreso del abono en las cuentas de EFS.
+
+Las partes acuerdan que se considerará como cumplida la obligación de EL CLIENTE a EFS una vez que éste último haya recibido efectivamente el dinero, esa mención aplica para el cálculo de cualquier pago sobre cuotas, liquidaciones u otros.
+
+CLÁUSULA NOVENA.-  SOBRE EL ORIGEN DEL DINERO
+
+EL CLIENTE declara que la información sobre el origen de sus ingresos proporcionada a EFS es real, estando obligado a prestar la información y documentación que EFS le requiera en cualquier oportunidad, en el marco de las políticas de prevención de lavado de activos y financiamiento del terrorismo.
+
+CLÁUSULA DÉCIMA.-  MODALIDADES DE LA CONTRATACIÓN
+
+EFS, le puede otorgar el mutuo dinerario en la siguientes modalidades.
+
+A) Mutuo dinerario con pagaré incompleto (en adelante “EL PAGARÉ”) como garantía ante incumplimiento de pago, para lo cual se anexará EL PAGARÉ, el cual podrá ser ejecutado por cualquiera de las causales de resolución contractual, por el total del monto de liquidación que practique EFS.
+
+B) Mutuo dinerario con contrato de servicio de intermediación (en adelante “EL CONTRATO”), mediante el cual autoriza a EFS, de forma previa y expresa, hacer el traspaso en su nombre y representación, del crédito vigente a EL CLIENTE.
+
+CLÁUSULA DÉCIMO PRIMERA.- RESOLUCIÓN CONTRACTUAL
+
+EFS podrá resolver de pleno derecho este contrato y dar por vencidos todos los plazos de las obligaciones directas e indirectas de EL CLIENTE derivadas del préstamo, vencidas o no; y, exigir el pago íntegro de lo adeudado, conforme a la liquidación total que se efectúe, y en su caso, iniciar las acciones judiciales y/o ejercer los derechos que le asisten como acreedor, siendo las siguientes causales:
+
+A) Incumpla el pago de una o más de una cuota de su préstamo.
+
+B) Por voluntad de EL CLIENTE, debiendo comunicar su decisión a EFS por cualquiera de los canales de comunicación, procediendo a activar el contrato de intermediación cancelando el monto total liquidado por EFS.
+
+C) En el caso de incumplir las obligaciones descritas en la cláusula quinta del presente contrato, o por advertirse falsedad en la declaración Jurada o la declaración de origen del dinero y garantía descritas en la cláusula novena y décimo sexta.
+
+D) Cuando EL CLIENTE tenga otros contratos anteriores, paralelos o sucesivos con EFS; y, en uno o más de ellos haya recaído en incumplimiento de pago, revalorización en perjuicio de EFS, gravando la garantía con una carga posterior al préstamo, manipulado o inutilizando de manera tendenciosa la garantía que impida su libre comercialización
+
+E) Otras que sean permitidas por Ley, y que EFS pueda llegar a implementar comunicando oportunamente a EL CLIENTE.
+
+CLÁUSULA DÉCIMO SEGUNDA.- PROTECCIÓN DE DATOS
+
+EFS es responsable de los datos de carácter personal que sean suministrados por EL CLIENTE, pudiendo incluirlas en su Base de Datos administrativa y comercial; así, desde la suscripción del presente contrato, EL CLIENTE expresa su consentimiento para el tratamiento de los mismos, o que se faciliten por medios electrónicos o manuales.
+
+EL CLIENTE podrá ejercer los derechos que corresponden conforme a la Ley nº 29733, tales como: acceso, rectificación, oposición y cancelación de los datos personales. EFS adoptará las medidas necesarias para no revelar información alguna, salvo en situaciones expresamente establecidas conforme a Ley.
+
+CLÁUSULA DÉCIMO TERCERA.- COMPETENCIA TERRITORIAL
+
+Las partes se someten a la jurisdicción y competencia de los jueces y tribunales del lugar donde se celebra el contrato. Sin perjuicio de ello, EFS podrá cursar las comunicaciones y notificaciones a los diferentes domicilios que EL CLIENTE u otros intervinientes hayan señalado en el presente contrato y sus modificaciones posteriores, los cuales deberán haber sido comunicados a EFS, conforme a la cláusula séptima, dentro de la misma ciudad y dentro del área urbana.
+
+<!-- BLOQUE_FIRMAS -->
+
+Las partes firman el presente documento, por duplicado, en señal de total conformidad.
+
+EL CLIENTE declara que se le informa y exhibe de forma previa.
+
+{{CIUDAD_CONTRATO}}, {{FECHA_EMISION_FORMATEADA}}
+
+Firma
+
+DNI: ______________________
+
+Huella
+
+PRESTAMOS CASTILLO
+
+Gerente General

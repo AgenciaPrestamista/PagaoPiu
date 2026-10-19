@@ -38,4 +38,16 @@ public class ContratoDetalleResponseDTO {
     private String contratoNombreOriginal;
     private LocalDateTime fechaSubidaContrato;
     private List<CuotaResponseDTO> cuotas;
+    private String textoContrato;
+    private String bloqueFirmas;
+    private boolean tieneFirmaGerente;
+    private BigDecimal temPorcentajeCuatroDecimales;
+    private String ciudadContrato;
+    private String fechaEmisionFormateada;
+    private String emisorRazonSocial;
+    private String empresaRazonSocial;
+    private String empresaRuc;
+    private String empresaRepresentanteNombre;
+    private String empresaRepresentanteDocumento;
+    private String empresaRepresentanteCargo;
 }

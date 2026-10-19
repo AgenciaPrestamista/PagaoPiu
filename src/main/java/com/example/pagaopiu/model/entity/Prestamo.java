@@ -103,4 +103,19 @@ public class Prestamo {
 
     @Column(name = "contrato_fecha_subida")
     private LocalDateTime contratoFechaSubida;
+
+    @Column(name = "empresa_razon_social", length = 300)
+    private String empresaRazonSocial;
+
+    @Column(name = "empresa_ruc", length = 11)
+    private String empresaRuc;
+
+    @Column(name = "empresa_representante_nombre", length = 300)
+    private String empresaRepresentanteNombre;
+
+    @Column(name = "empresa_representante_documento", length = 20)
+    private String empresaRepresentanteDocumento;
+
+    @Column(name = "empresa_representante_cargo", length = 100)
+    private String empresaRepresentanteCargo;
 }
