@@ -2,11 +2,10 @@
 FROM eclipse-temurin:21-jdk-alpine AS builder
 WORKDIR /app
 
-# Copiar archivos de Maven Wrapper y dependencias primero para optimizar caché
+# Copiar archivos de Maven Wrapper
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
 RUN chmod +x mvnw
-RUN ./mvnw dependency:go-offline -B
 
 # Copiar código fuente y compilar JAR sin ejecutar tests (los tests se ejecutan en CI)
 COPY src ./src
