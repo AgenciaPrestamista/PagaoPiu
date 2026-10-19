@@ -36,7 +36,18 @@ public class ContratoFileStorageService {
             @Value("${app.cloudinary.cloud-name:}") String cloudName,
             @Value("${app.cloudinary.api-key:}") String apiKey,
             @Value("${app.cloudinary.api-secret:}") String apiSecret) {
-        this.storageDirectory = Paths.get(storageDir).toAbsolutePath().normalize();
+        Path dir;
+        try {
+            dir = Paths.get(storageDir).toAbsolutePath().normalize();
+            Files.createDirectories(dir);
+        } catch (Exception e) {
+            dir = Paths.get(System.getProperty("java.io.tmpdir", "/tmp"), "uploads", "contratos").toAbsolutePath().normalize();
+            try {
+                Files.createDirectories(dir);
+            } catch (Exception ignored) {
+            }
+        }
+        this.storageDirectory = dir;
         this.maxSizeBytes = maxSizeBytes;
         this.storageProvider = storageProvider != null ? storageProvider.trim().toLowerCase() : "local";
         if (cloudName != null && !cloudName.isBlank() && apiKey != null && !apiKey.isBlank() && apiSecret != null && !apiSecret.isBlank()) {
@@ -47,11 +58,6 @@ public class ContratoFileStorageService {
                     "secure", true));
         } else {
             this.cloudinary = null;
-        }
-        try {
-            Files.createDirectories(this.storageDirectory);
-        } catch (IOException e) {
-            throw new NegocioException("No fue posible inicializar el directorio de almacenamiento de contratos: " + e.getMessage());
         }
     }
 

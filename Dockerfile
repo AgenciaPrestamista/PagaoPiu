@@ -16,12 +16,15 @@ RUN ./mvnw clean package -DskipTests -B
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Crear usuario sin privilegios para mayor seguridad
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# Crear usuario sin privilegios y asegurar permisos de escritura para uploads
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
+    && mkdir -p /app/uploads/contratos \
+    && chown -R appuser:appgroup /app
+
 USER appuser
 
 # Copiar el JAR generado
-COPY --from=builder /app/target/*.jar app.jar
+COPY --chown=appuser:appgroup --from=builder /app/target/*.jar app.jar
 
 # Exponer el puerto del servidor Spring Boot
 EXPOSE 8080

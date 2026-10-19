@@ -92,7 +92,28 @@ jobs:
       - name: 🚀 Desplegar contenedor en Google Cloud Run
         env:
           IMAGE_TAG: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          DB_URL_VAL: ${{ secrets.DB_URL }}
+          DB_USER_VAL: ${{ secrets.DB_USERNAME }}
+          DB_PASS_VAL: ${{ secrets.DB_PASSWORD }}
+          RENIEC_PROV_VAL: ${{ secrets.RENIEC_PROVIDER }}
+          RENIEC_URL_VAL: ${{ secrets.RENIEC_API_URL }}
+          RENIEC_TOK_VAL: ${{ secrets.RENIEC_API_TOKEN }}
+          FRONT_URL_VAL: ${{ secrets.FRONTEND_URL }}
+          STORAGE_PROV_VAL: ${{ secrets.STORAGE_PROVIDER }}
+          CLD_NAME_VAL: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLD_KEY_VAL: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLD_SEC_VAL: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
+          RENIEC_PROVIDER="${RENIEC_PROV_VAL:-api}"
+          RENIEC_API_URL="${RENIEC_URL_VAL:-https://api.json.pe/api/dni}"
+          FRONTEND_URL="${FRONT_URL_VAL:-http://localhost:5173}"
+          STORAGE_PROVIDER="${STORAGE_PROV_VAL:-local}"
+          if [ -n "$CLD_NAME_VAL" ] && [ -n "$CLD_KEY_VAL" ] && [ -n "$CLD_SEC_VAL" ]; then
+            STORAGE_PROVIDER="cloudinary"
+          fi
+
+          ENV_VARS="DB_URL=${DB_URL_VAL},DB_USERNAME=${DB_USER_VAL},DB_PASSWORD=${DB_PASS_VAL},RENIEC_PROVIDER=${RENIEC_PROVIDER},RENIEC_API_URL=${RENIEC_API_URL},RENIEC_API_TOKEN=${RENIEC_TOK_VAL},FRONTEND_URL=${FRONTEND_URL},STORAGE_PROVIDER=${STORAGE_PROVIDER},CLOUDINARY_CLOUD_NAME=${CLD_NAME_VAL},CLOUDINARY_API_KEY=${CLD_KEY_VAL},CLOUDINARY_API_SECRET=${CLD_SEC_VAL}"
+
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image $IMAGE_TAG \
             --region ${{ env.REGION }} \
@@ -101,7 +122,7 @@ jobs:
             --port 8080 \
             --memory 512Mi \
             --cpu 1 \
-            --set-env-vars "DB_URL=${{ secrets.DB_URL }},DB_USERNAME=${{ secrets.DB_USERNAME }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},RENIEC_PROVIDER=${{ secrets.RENIEC_PROVIDER || 'api' }},RENIEC_API_URL=${{ secrets.RENIEC_API_URL || 'https://api.json.pe/api/dni' }},RENIEC_API_TOKEN=${{ secrets.RENIEC_API_TOKEN }},FRONTEND_URL=${{ secrets.FRONTEND_URL }},STORAGE_PROVIDER=${{ secrets.STORAGE_PROVIDER || 'cloudinary' }},CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }},CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }},CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}" \
+            --set-env-vars "$ENV_VARS" \
             --quiet
 
       - name: 🌐 Mostrar URL pública del Backend desplegado
