@@ -23,4 +23,6 @@ public class PanelResponseDTO {
     private long totalPrestamosExtrajudiciales;
     private BigDecimal totalMontoCobrado;
     private BigDecimal totalInteresesCobrados;
+    private BigDecimal totalMontoColocado;
+    private long totalClientes;
 }

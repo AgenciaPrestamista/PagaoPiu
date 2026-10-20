@@ -34,5 +34,8 @@ public class PrestamoResponseDTO {
     private Boolean impreso;
     private boolean tieneContratoFirmado;
     private String contratoNombreOriginal;
+    private BigDecimal saldoPendiente;
+    private Integer cuotasTotales;
+    private Integer cuotasPagadas;
     private List<CuotaResponseDTO> cuotas;
 }

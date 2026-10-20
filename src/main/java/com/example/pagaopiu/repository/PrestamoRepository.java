@@ -68,6 +68,36 @@ public interface PrestamoRepository extends JpaRepository<Prestamo, Long> {
     """)
     long countBySucursalIdAndEstado(@Param("sucursalId") Long sucursalId, @Param("estado") EstadoPrestamo estado);
 
+    @Query("""
+        SELECT COALESCE(SUM(p.capital), 0)
+        FROM Prestamo p
+        WHERE p.sucursal.id = :sucursalId
+          AND p.estado != com.example.pagaopiu.model.enums.EstadoPrestamo.ANULADO
+    """)
+    BigDecimal sumCapitalColocadoBySucursalId(@Param("sucursalId") Long sucursalId);
+
+    @Query("""
+        SELECT COALESCE(SUM(p.capital), 0)
+        FROM Prestamo p
+        WHERE p.estado != com.example.pagaopiu.model.enums.EstadoPrestamo.ANULADO
+    """)
+    BigDecimal sumTotalCapitalColocado();
+
+    @Query("""
+        SELECT COUNT(DISTINCT p.cliente.id)
+        FROM Prestamo p
+        WHERE p.sucursal.id = :sucursalId
+          AND p.estado != com.example.pagaopiu.model.enums.EstadoPrestamo.ANULADO
+    """)
+    long countClientesBySucursalId(@Param("sucursalId") Long sucursalId);
+
+    @Query("""
+        SELECT COUNT(DISTINCT p.cliente.id)
+        FROM Prestamo p
+        WHERE p.estado != com.example.pagaopiu.model.enums.EstadoPrestamo.ANULADO
+    """)
+    long countTotalClientes();
+
     @EntityGraph(attributePaths = {"cliente", "sucursal", "asesor"})
     Optional<Prestamo> findByNumeroContrato(String numeroContrato);
 

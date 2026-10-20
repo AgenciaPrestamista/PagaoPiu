@@ -49,8 +49,20 @@ public class PrestamoRestController {
     }
 
     @GetMapping("/recientes")
-    public ResponseEntity<List<PrestamoResponseDTO>> listarRecientes() {
+    public ResponseEntity<List<PrestamoResponseDTO>> listarRecientes(
+            @RequestParam(value = "sucursalId", required = false) Long sucursalId,
+            @RequestParam(value = "estado", required = false) String estado) {
         List<Prestamo> prestamos = prestamoService.listarPrestamosRecientes();
+        if (sucursalId != null) {
+            prestamos = prestamos.stream()
+                    .filter(p -> p.getSucursal() != null && sucursalId.equals(p.getSucursal().getId()))
+                    .toList();
+        }
+        if (estado != null && !estado.isBlank()) {
+            prestamos = prestamos.stream()
+                    .filter(p -> p.getEstado() != null && p.getEstado().name().equalsIgnoreCase(estado.trim()))
+                    .toList();
+        }
         List<PrestamoResponseDTO> dtos = prestamos.stream()
                 .map(p -> mapToDTO(p, prestamoService.obtenerCuotasPorPrestamoId(p.getId())))
                 .toList();
@@ -91,6 +103,15 @@ public class PrestamoRestController {
                 })
                 .toList();
 
+        long cuotasPagadas = cuotas.stream()
+                .filter(c -> c.getEstado() != null && "PAGADA".equalsIgnoreCase(c.getEstado().name()))
+                .count();
+
+        BigDecimal saldoPendiente = cuotas.stream()
+                .filter(c -> c.getEstado() != null && "PENDIENTE".equalsIgnoreCase(c.getEstado().name()))
+                .map(c -> c.getCapital() != null ? c.getCapital() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         return PrestamoResponseDTO.builder()
                 .id(prestamo.getId())
                 .clienteDni(prestamo.getCliente().getDni())
@@ -111,6 +132,9 @@ public class PrestamoRestController {
                 .impreso(prestamo.getImpreso())
                 .tieneContratoFirmado(prestamo.getContratoRuta() != null && !prestamo.getContratoRuta().isBlank())
                 .contratoNombreOriginal(prestamo.getContratoNombreOriginal())
+                .saldoPendiente(saldoPendiente)
+                .cuotasTotales(cuotas.size())
+                .cuotasPagadas((int) cuotasPagadas)
                 .cuotas(cuotasDTO)
                 .build();
     }

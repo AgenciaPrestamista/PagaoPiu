@@ -22,4 +22,6 @@ public class PanelSucursalDTO {
     private long prestamosExtrajudiciales;
     private BigDecimal montoTotalCobrado;
     private BigDecimal interesesCobrados;
+    private BigDecimal montoTotalColocado;
+    private long cantidadClientes;
 }

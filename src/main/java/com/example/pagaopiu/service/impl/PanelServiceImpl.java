@@ -56,12 +56,21 @@ public class PanelServiceImpl implements PanelService {
         long sumExtrajudiciales = 0;
         BigDecimal sumCobrado = BigDecimal.ZERO;
         BigDecimal sumIntereses = BigDecimal.ZERO;
+        BigDecimal sumColocado = BigDecimal.ZERO;
 
         for (Sucursal s : sucursales) {
             long activos = prestamoRepository.countActivosBySucursalId(s.getId());
             long vigentes = prestamoRepository.countBySucursalIdAndEstado(s.getId(), EstadoPrestamo.VIGENTE);
             long morosos = prestamoRepository.countBySucursalIdAndEstado(s.getId(), EstadoPrestamo.MOROSO);
             long extra = prestamoRepository.countBySucursalIdAndEstado(s.getId(), EstadoPrestamo.EXTRAJUDICIAL);
+
+            BigDecimal colocado = prestamoRepository.sumCapitalColocadoBySucursalId(s.getId());
+            if (colocado == null) {
+                colocado = BigDecimal.ZERO;
+            }
+            colocado = colocado.setScale(2, RoundingMode.HALF_UP);
+
+            long clientesSucursal = prestamoRepository.countClientesBySucursalId(s.getId());
 
             BigDecimal cobrado = pagoRepository.sumMontoBySucursalId(s.getId());
             if (cobrado == null) {
@@ -83,6 +92,8 @@ public class PanelServiceImpl implements PanelService {
                     .prestamosVigentes(vigentes)
                     .prestamosMorosos(morosos)
                     .prestamosExtrajudiciales(extra)
+                    .montoTotalColocado(colocado)
+                    .cantidadClientes(clientesSucursal)
                     .montoTotalCobrado(cobrado)
                     .interesesCobrados(intereses)
                     .build());
@@ -93,10 +104,12 @@ public class PanelServiceImpl implements PanelService {
             sumExtrajudiciales += extra;
             sumCobrado = sumCobrado.add(cobrado);
             sumIntereses = sumIntereses.add(intereses);
+            sumColocado = sumColocado.add(colocado);
         }
 
         long clientesMorosos = clienteRepository.countByEstado(EstadoCliente.MOROSO);
         long clientesExtrajudiciales = clienteRepository.countByEstado(EstadoCliente.EXTRAJUDICIAL);
+        long totalClientesUnicos = prestamoRepository.countTotalClientes();
 
         return PanelResponseDTO.builder()
                 .clientesMorosos(clientesMorosos)
@@ -106,6 +119,8 @@ public class PanelServiceImpl implements PanelService {
                 .totalPrestamosVigentes(sumVigentes)
                 .totalPrestamosMorosos(sumMorosos)
                 .totalPrestamosExtrajudiciales(sumExtrajudiciales)
+                .totalMontoColocado(sumColocado.setScale(2, RoundingMode.HALF_UP))
+                .totalClientes(totalClientesUnicos)
                 .totalMontoCobrado(sumCobrado.setScale(2, RoundingMode.HALF_UP))
                 .totalInteresesCobrados(sumIntereses.setScale(2, RoundingMode.HALF_UP))
                 .build();
