@@ -65,6 +65,7 @@ public class AuthRestController {
                     .rol(principal.getUsuario().getRol().name())
                     .sucursalId(principal.getSucursal() != null ? principal.getSucursal().getId() : null)
                     .sucursalNombre(principal.getSucursal() != null ? principal.getSucursal().getNombre() : null)
+                    .activo(principal.getUsuario().isActivo())
                     .build();
 
             return ResponseEntity.ok(info);
@@ -86,6 +87,7 @@ public class AuthRestController {
                 .rol(principal.getUsuario().getRol().name())
                 .sucursalId(principal.getSucursal() != null ? principal.getSucursal().getId() : null)
                 .sucursalNombre(principal.getSucursal() != null ? principal.getSucursal().getNombre() : null)
+                .activo(principal.getUsuario().isActivo())
                 .build();
         return ResponseEntity.ok(info);
     }

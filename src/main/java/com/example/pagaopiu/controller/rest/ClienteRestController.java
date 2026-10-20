@@ -73,8 +73,6 @@ public class ClienteRestController {
             respuesta.put("direccion", direccion);
             respuesta.put("estadoSunat", estadoSunat);
             respuesta.put("condicionSunat", condicionSunat);
-            respuesta.put("representanteNombre", repNombre);
-            respuesta.put("representanteDocumento", repDoc);
             respuesta.put("representanteCargo", repCargo);
             respuesta.put("nacionalidad", "PERUANA");
             respuesta.put("dniVigente", true);

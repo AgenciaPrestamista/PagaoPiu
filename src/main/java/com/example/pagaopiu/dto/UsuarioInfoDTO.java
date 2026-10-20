@@ -18,4 +18,5 @@ public class UsuarioInfoDTO {
     private String rol;
     private Long sucursalId;
     private String sucursalNombre;
+    private Boolean activo;
 }

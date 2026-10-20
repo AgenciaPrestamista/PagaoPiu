@@ -11,4 +11,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     @EntityGraph(attributePaths = {"sucursal"})
     Optional<Usuario> findByUsername(String username);
+
+    @EntityGraph(attributePaths = {"sucursal"})
+    java.util.List<Usuario> findAllByOrderByIdAsc();
+
+    boolean existsByUsername(String username);
 }

@@ -26,4 +26,6 @@ public class PrestamoRegistroDTO {
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate fechaNacimiento;
+
+    private String dniPresentado;
 }

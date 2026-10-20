@@ -146,7 +146,7 @@ public class ContratoM1IntegrationTest {
         LocalDate hoy = LocalDate.now(clock);
         String ruc = "20987654321";
         String razonSocial = "COMERCIAL LOS ANDES S.A.C.";
-        String repNombreOriginal = "CARLOS ALBERTO MENDOZA RUIZ";
+        String repNombreOriginal = "Juan Carlos Pérez López";
         String repDniOriginal = "10000001";
         String repCargoOriginal = "GERENTE GENERAL";
 
@@ -171,6 +171,7 @@ public class ContratoM1IntegrationTest {
                 .monto(new BigDecimal("5000.00"))
                 .plazoMeses(6)
                 .fechaPrestamo(hoy)
+                .dniPresentado(repDniOriginal)
                 .build();
 
         Prestamo prestamoGenerado = prestamoService.generarContrato(registroDTO, "asesor.trujillo");

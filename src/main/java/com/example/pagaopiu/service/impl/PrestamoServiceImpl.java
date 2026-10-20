@@ -57,6 +57,7 @@ public class PrestamoServiceImpl implements PrestamoService {
     private final Clock clock;
     private final CronogramaCalculator cronogramaCalculator;
     private final ContratoFileStorageService contratoFileStorageService;
+    private final com.example.pagaopiu.service.CajaHermesService cajaHermesService;
 
     @Value("${app.prestamo.monto-minimo:1.00}")
     private BigDecimal montoMinimo = new BigDecimal("1.00");
@@ -80,8 +81,9 @@ public class PrestamoServiceImpl implements PrestamoService {
             ClienteRegistroHelper clienteRegistroHelper,
             Clock clock,
             EstadoService estadoService,
-            ContratoFileStorageService contratoFileStorageService) {
-        this(prestamoRepository, cuotaRepository, clienteRepository, usuarioRepository, reniecClient, sunatClient, clienteRegistroHelper, clock, estadoService, new CronogramaCalculator(), contratoFileStorageService);
+            ContratoFileStorageService contratoFileStorageService,
+            @Autowired(required = false) com.example.pagaopiu.service.CajaHermesService cajaHermesService) {
+        this(prestamoRepository, cuotaRepository, clienteRepository, usuarioRepository, reniecClient, sunatClient, clienteRegistroHelper, clock, estadoService, new CronogramaCalculator(), contratoFileStorageService, cajaHermesService);
     }
 
     public PrestamoServiceImpl(
@@ -93,7 +95,7 @@ public class PrestamoServiceImpl implements PrestamoService {
             ClienteRegistroHelper clienteRegistroHelper,
             Clock clock,
             CronogramaCalculator cronogramaCalculator) {
-        this(prestamoRepository, cuotaRepository, clienteRepository, usuarioRepository, reniecClient, null, clienteRegistroHelper, clock, null, cronogramaCalculator, null);
+        this(prestamoRepository, cuotaRepository, clienteRepository, usuarioRepository, reniecClient, null, clienteRegistroHelper, clock, null, cronogramaCalculator, null, null);
     }
 
     public PrestamoServiceImpl(
@@ -107,7 +109,8 @@ public class PrestamoServiceImpl implements PrestamoService {
             Clock clock,
             EstadoService estadoService,
             CronogramaCalculator cronogramaCalculator,
-            ContratoFileStorageService contratoFileStorageService) {
+            ContratoFileStorageService contratoFileStorageService,
+            @Autowired(required = false) com.example.pagaopiu.service.CajaHermesService cajaHermesService) {
         this.prestamoRepository = prestamoRepository;
         this.cuotaRepository = cuotaRepository;
         this.clienteRepository = clienteRepository;
@@ -119,6 +122,7 @@ public class PrestamoServiceImpl implements PrestamoService {
         this.estadoService = estadoService;
         this.cronogramaCalculator = cronogramaCalculator;
         this.contratoFileStorageService = contratoFileStorageService;
+        this.cajaHermesService = cajaHermesService;
     }
 
     private record ContextoPrestamo(Cliente cliente, Usuario asesor, BigDecimal monto, BigDecimal tea, BigDecimal tem, BigDecimal cuotaFija, List<CuotaDetalle> cronograma, LocalDate fechaPrestamo, Integer plazoMeses) {}
@@ -319,6 +323,7 @@ public class PrestamoServiceImpl implements PrestamoService {
         }
 
         String dniDoc = (dto != null && dto.getDni() != null) ? dto.getDni().trim() : "";
+        String dniPresentado = (dto != null && dto.getDniPresentado() != null) ? dto.getDniPresentado().trim() : null;
         String empresaRazonSocial = null;
         String empresaRuc = null;
         String repNombre = null;
@@ -355,11 +360,51 @@ public class PrestamoServiceImpl implements PrestamoService {
                     || sunat.getRepresentanteCargo() == null || sunat.getRepresentanteCargo().isBlank()) {
                 throw new NegocioException("La empresa no cuenta con información completa del representante legal en SUNAT.");
             }
+
+            if (dniPresentado == null || dniPresentado.isBlank()) {
+                throw new NegocioException("El DNI de la persona que se presenta es obligatorio para empresas con RUC 20.");
+            }
+
+            // Exige que ese DNI coincida con el DNI del representante legal devuelto por SUNAT
+            if (!dniPresentado.equals(sunat.getRepresentanteDocumento().trim())) {
+                throw new NegocioException("La persona que se presenta no figura como representante legal de esta empresa.");
+            }
+
+            // Validar persona presente con RENIEC (DNI vigente, no fallecido, nacionalidad peruana, y nombre coincidente)
+            Optional<ReniecPadron> repPadronOpt = reniecClient.buscarPorDni(dniPresentado);
+            if (repPadronOpt.isEmpty()) {
+                throw new NegocioException("El DNI de la persona que se presenta no se encuentra registrado en el padrón de RENIEC.");
+            }
+            ReniecPadron repPadron = repPadronOpt.get();
+            if (!repPadron.isDniVigente()) {
+                throw new NegocioException("El DNI del representante legal no se encuentra vigente en RENIEC.");
+            }
+            if (repPadron.isFallecido()) {
+                throw new NegocioException("La persona que se presenta se encuentra registrada como fallecida en RENIEC.");
+            }
+            if (!"PERUANA".equalsIgnoreCase(repPadron.getNacionalidad())) {
+                throw new NegocioException("La persona que se presenta no posee nacionalidad peruana.");
+            }
+
+            String repSunatNorm = Normalizer.normalize(sunat.getRepresentanteNombre().trim(), Normalizer.Form.NFC);
+            String repPadronNorm = Normalizer.normalize(repPadron.getNombreCompleto().trim(), Normalizer.Form.NFC);
+            if (!repSunatNorm.equalsIgnoreCase(repPadronNorm)) {
+                throw new NegocioException("El nombre del representante legal no coincide con el registrado en RENIEC.");
+            }
+
             empresaRuc = dniDoc;
             empresaRazonSocial = sunat.getRazonSocial().trim();
             repNombre = sunat.getRepresentanteNombre().trim();
             repDoc = sunat.getRepresentanteDocumento().trim();
             repCargo = sunat.getRepresentanteCargo().trim();
+        } else if (dniDoc.length() == 11 && dniDoc.startsWith("10")) {
+            // Para RUC 10: el DNI presentado debe ser igual al DNI derivado de los dígitos 3 a 10 del RUC; si no, rechaza.
+            String dniDerivado = dniDoc.substring(2, 10);
+            if (dniPresentado != null && !dniPresentado.isBlank()) {
+                if (!dniPresentado.equals(dniDerivado)) {
+                    throw new NegocioException("El DNI presentado (" + dniPresentado + ") no coincide con el DNI derivado del RUC 10 (" + dniDerivado + ").");
+                }
+            }
         }
 
         ContextoPrestamo ctx = validarSolicitudYBloquearCliente(dto, usernameAsesor, false);
@@ -476,6 +521,10 @@ public class PrestamoServiceImpl implements PrestamoService {
 
         if (prestamoRepository.existsByContratoHash(guardado.hashSha256())) {
             throw new NegocioException("El archivo ya fue utilizado como contrato firmado en otro préstamo.");
+        }
+
+        if (cajaHermesService != null && prestamo.getSucursal() != null) {
+            cajaHermesService.verificarYDescontarSaldoCaja(prestamo.getSucursal().getId(), prestamo.getCapital());
         }
 
         prestamo.setEstado(EstadoPrestamo.VIGENTE);

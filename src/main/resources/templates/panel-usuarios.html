@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administración de Usuarios - PagaOPiu</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card-custom { border-radius: 10px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+        .kpi-title { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; color: #6c757d; }
+        .kpi-value { font-size: 1.8rem; font-weight: 700; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold text-light" th:href="@{/panel}">🏦 PagaOPiu — Gerencia General</a>
+        <div class="d-flex align-items-center text-white">
+            <span class="me-3" sec:authorize="isAuthenticated()">
+                👔 <span sec:authentication="name" class="fw-semibold"></span>
+                <span class="badge bg-secondary ms-1">GERENTE</span>
+            </span>
+            <form th:action="@{/logout}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-light btn-sm">Cerrar Sesión</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<div class="container my-4">
+    <!-- Navegación Gerencial -->
+    <ul class="nav nav-pills mb-4 gap-2">
+        <li class="nav-item">
+            <a class="nav-link text-dark bg-white border fw-semibold" th:href="@{/panel}">📊 Métricas y Supervisión</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active fw-semibold" th:href="@{/panel/usuarios}">👥 Administración de Usuarios</a>
+        </li>
+    </ul>
+
+    <!-- Mensajes Flash -->
+    <div th:if="${mensajeExito}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${mensajeExito}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${mensajeError}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${mensajeError}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <!-- Encabezado y Acción -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">👥 Administración de Usuarios y Cuentas</h3>
+            <p class="text-muted mb-0 small">Control de accesos, creación de nuevos usuarios y asignación de agencias operativas.</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-primary fw-semibold" data-bs-toggle="modal" data-bs-target="#modalCrearUsuario">
+                ➕ Crear Nueva Cuenta
+            </button>
+        </div>
+    </div>
+
+    <!-- Tabla de Usuarios -->
+    <div class="card card-custom overflow-hidden mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0 text-dark">📋 Cuentas Registradas en el Sistema</h5>
+            <span class="badge bg-light text-dark border" th:text="${usuarios.size()} + ' usuarios'">0 usuarios</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Usuario</th>
+                        <th>Nombre Completo</th>
+                        <th class="text-center">Rol</th>
+                        <th>Agencia / Sucursal</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="u : ${usuarios}">
+                        <td class="text-muted small" th:text="${u.id}">1</td>
+                        <td>
+                            <code class="fw-bold text-dark" th:text="${u.username}">usuario</code>
+                        </td>
+                        <td class="fw-semibold text-dark" th:text="${u.nombre}">Nombre Apellido</td>
+                        <td class="text-center">
+                            <span th:if="${u.rol == 'GERENTE'}" class="badge bg-warning text-dark border">GERENTE</span>
+                            <span th:if="${u.rol == 'ASESOR'}" class="badge bg-info text-dark border">ASESOR</span>
+                        </td>
+                        <td>
+                            <span th:if="${u.sucursalNombre != null}" class="badge bg-light text-dark border" th:text="'Agencia ' + ${u.sucursalNombre}">Agencia</span>
+                            <span th:if="${u.sucursalNombre == null}" class="text-muted small fst-italic">Todas (Global)</span>
+                        </td>
+                        <td class="text-center">
+                            <span th:if="${u.activo}" class="badge bg-success">Activo</span>
+                            <span th:unless="${u.activo}" class="badge bg-danger">Inactivo</span>
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <!-- Reset Password Modal Trigger -->
+                                <button type="button" class="btn btn-outline-secondary btn-sm"
+                                        data-bs-toggle="modal"
+                                        th:data-bs-target="'#modalPassword_' + ${u.id}">
+                                    🔑 Clave
+                                </button>
+
+                                <!-- Form Activar/Desactivar -->
+                                <form th:action="@{'/panel/usuarios/' + ${u.id} + '/toggle-activo'}" method="post" class="d-inline">
+                                    <input type="hidden" name="activo" th:value="${!u.activo}" />
+                                    <button th:if="${u.activo}" type="submit" class="btn btn-outline-warning btn-sm"
+                                            th:disabled="${#authentication.name == u.username}"
+                                            onclick="return confirm('¿Seguro que deseas desactivar esta cuenta?');">
+                                        Desactivar
+                                    </button>
+                                    <button th:unless="${u.activo}" type="submit" class="btn btn-outline-success btn-sm">
+                                        Activar
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- Modal Reset Password Individual -->
+                            <div class="modal fade text-start" th:id="'modalPassword_' + ${u.id}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered modal-sm">
+                                    <div class="modal-content">
+                                        <form th:action="@{'/panel/usuarios/' + ${u.id} + '/password'}" method="post">
+                                            <div class="modal-header">
+                                                <h6 class="modal-title fw-bold">Restablecer Contraseña</h6>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p class="small text-muted mb-2">Usuario: <strong th:text="${u.username}"></strong></p>
+                                                <div class="mb-3">
+                                                    <label class="form-label small fw-semibold">Nueva Contraseña</label>
+                                                    <input type="password" name="nuevoPassword" class="form-control form-control-sm" required minlength="6" placeholder="Mín. 6 caracteres">
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                                                <button type="submit" class="btn btn-primary btn-sm">Actualizar</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Crear Nueva Cuenta -->
+<div class="modal fade" id="modalCrearUsuario" tabindex="-1" aria-labelledby="modalCrearUsuarioLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form th:action="@{/panel/usuarios/crear}" method="post">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="modalCrearUsuarioLabel">➕ Crear Nueva Cuenta</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Nombre Completo <span class="text-danger">*</span></label>
+                        <input type="text" name="nombre" class="form-control" placeholder="Ej: Pedro Ruiz Mendoza" required maxlength="200">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Nombre de Usuario (Login) <span class="text-danger">*</span></label>
+                        <input type="text" name="username" class="form-control" placeholder="Ej: asesor.huanchaco" required maxlength="50" pattern="^[a-zA-Z0-9._-]+$" title="Sin espacios. Puede incluir letras, números, puntos o guiones">
+                        <small class="text-muted">Sin espacios, en minúsculas.</small>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Rol <span class="text-danger">*</span></label>
+                            <select name="rol" id="selectRol" class="form-select" required onchange="actualizarSucursalRequerida()">
+                                <option value="ASESOR" selected>ASESOR</option>
+                                <option value="GERENTE">GERENTE</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Agencia / Sucursal</label>
+                            <select name="sucursalId" id="selectSucursal" class="form-select" required>
+                                <option value="" disabled selected>-- Seleccionar Agencia --</option>
+                                <option th:each="s : ${sucursales}" th:value="${s.id}" th:text="${s.nombre}">Agencia</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Contraseña Inicial <span class="text-danger">*</span></label>
+                        <input type="password" name="password" class="form-control" placeholder="Mínimo 6 caracteres" required minlength="6">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-semibold">Guardar Cuenta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function actualizarSucursalRequerida() {
+        const rol = document.getElementById('selectRol').value;
+        const sucursal = document.getElementById('selectSucursal');
+        if (rol === 'GERENTE') {
+            sucursal.removeAttribute('required');
+        } else {
+            sucursal.setAttribute('required', 'required');
+        }
+    }
+</script>
+</body>
+</html>
