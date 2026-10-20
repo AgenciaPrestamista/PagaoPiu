@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -52,12 +53,17 @@ class EstadoIntegrationTest {
     @Autowired
     private Clock clock;
 
+    @Autowired
+    private com.example.pagaopiu.TestDatabaseCleaner databaseCleaner;
+
     @BeforeEach
     void limpiarBaseDatos() {
-        cuotaRepository.deleteAll();
-        pagoRepository.deleteAll();
-        prestamoRepository.deleteAll();
-        clienteRepository.deleteAll();
+        databaseCleaner.clean();
+    }
+
+    @AfterEach
+    void tearDown() {
+        databaseCleaner.clean();
     }
 
     private Prestamo crearPrestamoDemo(String dni, String nombre, BigDecimal monto, int plazo, String usernameAsesor) {

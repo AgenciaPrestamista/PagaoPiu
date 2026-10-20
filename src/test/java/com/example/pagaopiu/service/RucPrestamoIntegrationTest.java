@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Map;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -56,15 +57,20 @@ class RucPrestamoIntegrationTest {
     @Autowired
     private Clock clock;
 
+    @Autowired
+    private com.example.pagaopiu.TestDatabaseCleaner databaseCleaner;
+
     private static final String RUC_LOS_ANDES = "20987654321";
     private static final String RAZON_SOCIAL = "COMERCIAL LOS ANDES S.A.C.";
 
     @BeforeEach
     void setUp() {
-        cuotaRepository.deleteAll();
-        pagoRepository.deleteAll();
-        prestamoRepository.deleteAll();
-        clienteRepository.deleteAll();
+        databaseCleaner.clean();
+    }
+
+    @AfterEach
+    void tearDown() {
+        databaseCleaner.clean();
     }
 
     @Test

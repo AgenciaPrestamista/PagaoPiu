@@ -7,6 +7,10 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+concurrency:
+  group: pagaopiu-db-ci
+  cancel-in-progress: true
+
 env:
   PROJECT_ID: 'elaborate-night-511823-t6'
   REGION: 'us-central1'

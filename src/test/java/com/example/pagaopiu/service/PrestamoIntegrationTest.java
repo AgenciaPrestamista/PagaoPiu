@@ -36,6 +36,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import jakarta.servlet.Filter;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -85,6 +86,9 @@ class PrestamoIntegrationTest {
     @Autowired
     private Clock clock;
 
+    @Autowired
+    private com.example.pagaopiu.TestDatabaseCleaner databaseCleaner;
+
     private final CronogramaCalculator calculator = new CronogramaCalculator();
 
     @BeforeEach
@@ -93,10 +97,12 @@ class PrestamoIntegrationTest {
                 .webAppContextSetup(webApplicationContext)
                 .addFilters(springSecurityFilterChain)
                 .build();
-        cuotaRepository.deleteAll();
-        pagoRepository.deleteAll();
-        prestamoRepository.deleteAll();
-        clienteRepository.deleteAll();
+        databaseCleaner.clean();
+    }
+
+    @AfterEach
+    void tearDown() {
+        databaseCleaner.clean();
     }
 
     @Test

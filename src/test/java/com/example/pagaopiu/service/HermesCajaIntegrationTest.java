@@ -22,6 +22,7 @@ import com.example.pagaopiu.repository.UsuarioRepository;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -61,21 +62,23 @@ class HermesCajaIntegrationTest {
     @Autowired
     private Clock clock;
 
+    @Autowired
+    private com.example.pagaopiu.TestDatabaseCleaner databaseCleaner;
+
     private Sucursal sucursalTrujillo;
 
     @BeforeEach
     void setUp() {
-        incidenciaHermesRepository.deleteAll();
-        entregaHermesRepository.deleteAll();
-        cajaSucursalRepository.deleteAll();
-        cuotaRepository.deleteAll();
-        pagoRepository.deleteAll();
-        prestamoRepository.deleteAll();
-        clienteRepository.deleteAll();
+        databaseCleaner.clean();
 
         sucursalTrujillo = usuarioRepository.findByUsername("asesor.trujillo")
                 .orElseThrow()
                 .getSucursal();
+    }
+
+    @AfterEach
+    void tearDown() {
+        databaseCleaner.clean();
     }
 
     @Test

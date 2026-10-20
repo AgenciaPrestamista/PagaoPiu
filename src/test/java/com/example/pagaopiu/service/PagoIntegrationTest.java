@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -78,6 +79,9 @@ class PagoIntegrationTest {
     @Autowired
     private Clock clock;
 
+    @Autowired
+    private com.example.pagaopiu.TestDatabaseCleaner databaseCleaner;
+
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -87,10 +91,12 @@ class PagoIntegrationTest {
                 .addFilters(springSecurityFilterChain)
                 .build();
 
-        cuotaRepository.deleteAll();
-        pagoRepository.deleteAll();
-        prestamoRepository.deleteAll();
-        clienteRepository.deleteAll();
+        databaseCleaner.clean();
+    }
+
+    @AfterEach
+    void tearDown() {
+        databaseCleaner.clean();
     }
 
     private Prestamo crearPrestamoDemo(String dni, String nombre, BigDecimal monto, int plazo, String usernameAsesor) {
