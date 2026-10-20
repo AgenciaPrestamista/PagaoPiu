@@ -284,4 +284,47 @@ class PanelIntegrationTest {
         assertThat(panel.getTotalMontoCobrado()).isEqualByComparingTo(sumaCobrado);
         assertThat(panel.getTotalInteresesCobrados()).isEqualByComparingTo(sumaIntereses);
     }
+
+    @Test
+    @DisplayName("R14: Métricas de dinero colocado, cantidad de clientes prestatarios y filtro por sede")
+    void testMetricasColocacionYCantidadClientesPrestatariosPorSedeYGlobal() throws Exception {
+        // Crear 2 préstamos en Trujillo para 2 clientes distintos
+        Prestamo p1 = crearPrestamoDemo("10000001", "Juan Carlos Pérez López", new BigDecimal("2000.00"), 12, "asesor.trujillo");
+        Prestamo p2 = crearPrestamoDemo("10000002", "María Elena García Ríos", new BigDecimal("3000.00"), 12, "asesor.trujillo");
+
+        // Crear 1 préstamo en Piura
+        Prestamo p3 = crearPrestamoDemo("10000003", "José Antonio Núñez Ávila", new BigDecimal("1500.00"), 6, "asesor.piura");
+
+        PanelResponseDTO panel = panelService.obtenerMetricasPanel();
+
+        // Verificación de totales globales consolidados
+        assertThat(panel.getTotalMontoColocado()).isEqualByComparingTo("6500.00");
+        assertThat(panel.getTotalClientes()).isEqualTo(3);
+
+        // Verificación por sede individual
+        PanelSucursalDTO tru = panel.getSucursales().stream()
+                .filter(s -> s.getSucursalNombre().equals("Trujillo")).findFirst().orElseThrow();
+        PanelSucursalDTO piu = panel.getSucursales().stream()
+                .filter(s -> s.getSucursalNombre().equals("Piura")).findFirst().orElseThrow();
+        PanelSucursalDTO chi = panel.getSucursales().stream()
+                .filter(s -> s.getSucursalNombre().equals("Chiclayo")).findFirst().orElseThrow();
+
+        assertThat(tru.getMontoTotalColocado()).isEqualByComparingTo("5000.00");
+        assertThat(tru.getCantidadClientes()).isEqualTo(2);
+
+        assertThat(piu.getMontoTotalColocado()).isEqualByComparingTo("1500.00");
+        assertThat(piu.getCantidadClientes()).isEqualTo(1);
+
+        assertThat(chi.getMontoTotalColocado()).isEqualByComparingTo("0.00");
+        assertThat(chi.getCantidadClientes()).isEqualTo(0);
+
+        // Probar endpoint REST /api/prestamo/recientes filtrado por sede Trujillo
+        MockHttpSession sesionGerente = crearSesion("gerente");
+        mockMvc.perform(get("/api/prestamo/recientes?sucursalId=" + tru.getSucursalId())
+                        .session(sesionGerente))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].sucursalNombre").value("Trujillo"))
+                .andExpect(jsonPath("$[1].sucursalNombre").value("Trujillo"));
+    }
 }
