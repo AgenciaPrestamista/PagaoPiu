@@ -73,6 +73,7 @@ public class SunatClientApiImpl implements SunatClient {
             String repNombre = null;
             String repDoc = null;
             String repCargo = null;
+            List<SunatRucDTO.Representante> todosLosRepresentantes = new java.util.ArrayList<>();
 
             try {
                 Map<String, Object> repResp = restClient.post()
@@ -82,6 +83,19 @@ public class SunatClientApiImpl implements SunatClient {
                         .body(Map.class);
 
                 if (repResp != null && Boolean.TRUE.equals(repResp.get("success")) && repResp.get("data") instanceof List<?> list) {
+                    for (Object item : list) {
+                        if (item instanceof Map<?, ?> m) {
+                            Map<String, Object> repMap = (Map<String, Object>) m;
+                            String doc = valorCadena(repMap.get("numero_de_documento"));
+                            if (!doc.isEmpty()) {
+                                todosLosRepresentantes.add(SunatRucDTO.Representante.builder()
+                                        .nombre(valorCadena(repMap.get("nombre")))
+                                        .documento(doc)
+                                        .cargo(valorCadena(repMap.get("cargo"), "REPRESENTANTE LEGAL"))
+                                        .build());
+                            }
+                        }
+                    }
                     if (!list.isEmpty()) {
                         Map<String, Object> repElegido = null;
                         for (Object item : list) {
@@ -128,6 +142,7 @@ public class SunatClientApiImpl implements SunatClient {
                     .representanteNombre(repNombre)
                     .representanteDocumento(repDoc)
                     .representanteCargo(repCargo)
+                    .representantes(todosLosRepresentantes)
                     .activo(activo)
                     .habido(habido)
                     .build());

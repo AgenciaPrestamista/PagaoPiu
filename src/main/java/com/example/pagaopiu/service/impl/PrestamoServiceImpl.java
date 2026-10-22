@@ -366,9 +366,8 @@ public class PrestamoServiceImpl implements PrestamoService {
             }
 
             // Exige que ese DNI coincida con el DNI del representante legal devuelto por SUNAT
-            if (!dniPresentado.equals(sunat.getRepresentanteDocumento().trim())) {
-                throw new NegocioException("La persona que se presenta no figura como representante legal de esta empresa.");
-            }
+            SunatRucDTO.Representante repCoincidente = sunat.buscarRepresentantePorDocumento(dniPresentado)
+                    .orElseThrow(() -> new NegocioException("La persona que se presenta no figura como representante legal de esta empresa."));
 
             // Validar persona presente con RENIEC (DNI vigente, no fallecido, nacionalidad peruana, y nombre coincidente)
             Optional<ReniecPadron> repPadronOpt = reniecClient.buscarPorDni(dniPresentado);
@@ -386,7 +385,9 @@ public class PrestamoServiceImpl implements PrestamoService {
                 throw new NegocioException("La persona que se presenta no posee nacionalidad peruana.");
             }
 
-            String repSunatNorm = Normalizer.normalize(sunat.getRepresentanteNombre().trim(), Normalizer.Form.NFC);
+            String nombreRepSunat = repCoincidente.getNombre() != null && !repCoincidente.getNombre().isBlank()
+                    ? repCoincidente.getNombre() : sunat.getRepresentanteNombre();
+            String repSunatNorm = Normalizer.normalize(nombreRepSunat.trim(), Normalizer.Form.NFC);
             String repPadronNorm = Normalizer.normalize(repPadron.getNombreCompleto().trim(), Normalizer.Form.NFC);
             if (!repSunatNorm.equalsIgnoreCase(repPadronNorm)) {
                 throw new NegocioException("El nombre del representante legal no coincide con el registrado en RENIEC.");
@@ -394,9 +395,10 @@ public class PrestamoServiceImpl implements PrestamoService {
 
             empresaRuc = dniDoc;
             empresaRazonSocial = sunat.getRazonSocial().trim();
-            repNombre = sunat.getRepresentanteNombre().trim();
-            repDoc = sunat.getRepresentanteDocumento().trim();
-            repCargo = sunat.getRepresentanteCargo().trim();
+            repNombre = nombreRepSunat.trim();
+            repDoc = repCoincidente.getDocumento().trim();
+            repCargo = repCoincidente.getCargo() != null && !repCoincidente.getCargo().isBlank()
+                    ? repCoincidente.getCargo().trim() : sunat.getRepresentanteCargo().trim();
         } else if (dniDoc.length() == 11 && dniDoc.startsWith("10")) {
             // Para RUC 10: el DNI presentado debe ser igual al DNI derivado de los dígitos 3 a 10 del RUC; si no, rechaza.
             String dniDerivado = dniDoc.substring(2, 10);
