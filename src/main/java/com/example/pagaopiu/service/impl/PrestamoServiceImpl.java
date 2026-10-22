@@ -246,21 +246,33 @@ public class PrestamoServiceImpl implements PrestamoService {
             throw new NegocioException("El cliente ya tiene un contrato pendiente de firma en estado EN_ESPERA. Debe formalizarlo o cancelarlo antes de generar uno nuevo.");
         }
 
-        BigDecimal saldoPendiente = prestamoRepository.findSaldoCapitalPendienteByClienteId(cliente.getId());
-        if (saldoPendiente == null) {
-            saldoPendiente = BigDecimal.ZERO;
+        // El tope se mide sobre el capital original de los préstamos no cerrados (en cualquier sede) y agrupa
+        // al titular: un DNI y su RUC 10 derivado comparten el mismo tope. Un RUC 20 cuenta solo por sí mismo.
+        List<Long> idsTitular = new ArrayList<>();
+        idsTitular.add(cliente.getId());
+        String dniTitular = !esRuc ? dni : (dni.startsWith("10") ? dni.substring(2, 10) : null);
+        if (dniTitular != null) {
+            for (Cliente relacionado : clienteRepository.findRelacionadosPorDni(dniTitular)) {
+                if (!idsTitular.contains(relacionado.getId())) {
+                    idsTitular.add(relacionado.getId());
+                }
+            }
+        }
+        BigDecimal capitalVigente = prestamoRepository.sumCapitalVigenteByClienteIds(idsTitular);
+        if (capitalVigente == null) {
+            capitalVigente = BigDecimal.ZERO;
         }
 
         BigDecimal montoNuevo = dto.getMonto().setScale(2, RoundingMode.HALF_UP);
-        BigDecimal nuevoSaldoTotal = saldoPendiente.add(montoNuevo);
-        if (nuevoSaldoTotal.compareTo(montoMaximo) > 0) {
-            BigDecimal cupoRestante = montoMaximo.subtract(saldoPendiente);
+        BigDecimal nuevoTotal = capitalVigente.add(montoNuevo);
+        if (nuevoTotal.compareTo(montoMaximo) > 0) {
+            BigDecimal cupoRestante = montoMaximo.subtract(capitalVigente);
             if (cupoRestante.compareTo(BigDecimal.ZERO) < 0) {
                 cupoRestante = BigDecimal.ZERO;
             }
             throw new NegocioException(String.format(
-                    "El cliente excede el tope de deuda de S/ %.2f. Saldo pendiente actual: S/ %.2f. Cupo restante disponible: S/ %.2f.",
-                    montoMaximo, saldoPendiente, cupoRestante));
+                    "El cliente excede el tope de deuda de S/ %.2f. Capital vigente actual: S/ %.2f. Cupo restante disponible: S/ %.2f.",
+                    montoMaximo, capitalVigente, cupoRestante));
         }
 
         Usuario asesor = usuarioRepository.findByUsername(usernameAsesor)

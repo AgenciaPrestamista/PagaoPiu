@@ -52,6 +52,18 @@ public interface PrestamoRepository extends JpaRepository<Prestamo, Long> {
     """)
     BigDecimal findSaldoCapitalPendienteByClienteId(@Param("clienteId") Long clienteId);
 
+    /**
+     * Capital original de los préstamos aún no cerrados (excluye CANCELADO y ANULADO) de los clientes dados.
+     * Las cuotas pagadas parcialmente no liberan cupo; solo la cancelación total o la anulación.
+     */
+    @Query("""
+        SELECT COALESCE(SUM(p.capital), 0)
+        FROM Prestamo p
+        WHERE p.cliente.id IN :clienteIds
+          AND p.estado NOT IN (com.example.pagaopiu.model.enums.EstadoPrestamo.CANCELADO, com.example.pagaopiu.model.enums.EstadoPrestamo.ANULADO)
+    """)
+    BigDecimal sumCapitalVigenteByClienteIds(@Param("clienteIds") List<Long> clienteIds);
+
     @Query("""
         SELECT COUNT(p)
         FROM Prestamo p
