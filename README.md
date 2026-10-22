@@ -1,120 +1,254 @@
-# 🏦 PagaOPiu — Sistema Interno de Préstamos Personales
+# 🏦 PagaOPiu — Backend
 
-> **Proyecto de Evaluación — Scrum Sprint 1 (MVP)**  
-> **Fecha de Evaluación:** Lunes 19 de octubre de 2026  
-> **Stack:** Java 21 LTS | Spring Boot 4.1.1 | PostgreSQL 18.6 | React 19 + Vite | Bootstrap 5  
+API REST del sistema interno de préstamos personales **PagaOPiu**: registro y formalización de créditos, contratos, cobranza, control de caja por agencia y supervisión gerencial.
+
+> **Proyecto de Evaluación — Scrum Sprint 1 (MVP)**
+> **Stack:** Java 21 · Spring Boot 4.1.1 · Spring Security · Spring Data JPA · Flyway · PostgreSQL 18.6
+> **Frontend:** [`../pegapiu-frontend`](../pegapiu-frontend/README.md) (React 19 + Vite)
+
+## Contenido
+
+1. [Descripción general](#-descripción-general)
+2. [Puesta en marcha](#-puesta-en-marcha)
+3. [Variables de entorno](#-variables-de-entorno)
+4. [Usuarios de prueba](#-usuarios-de-prueba)
+5. [Datos demo](#-datos-demo)
+6. [Módulos y reglas de negocio](#-módulos-y-reglas-de-negocio)
+7. [API REST](#-api-rest)
+8. [Base de datos y migraciones](#-base-de-datos-y-migraciones)
+9. [Pruebas automatizadas](#-pruebas-automatizadas)
+10. [Docker y despliegue](#-docker-y-despliegue)
 
 ---
 
-## 📋 Descripción General
+## 📋 Descripción general
 
-**PagaOPiu** es un sistema web empresarial para la gestión, desembolso, amortización y cobranza de préstamos personales de consumo, distribuido en una red de 5 sucursales en el norte del Perú (Chimbote, Trujillo, Chiclayo, Piura y Tumbes).
+**PagaOPiu** gestiona el ciclo completo de un préstamo en una red de 5 sucursales del norte del Perú (Chimbote, Trujillo, Chiclayo, Piura y Tumbes):
 
-El sistema cuenta con una arquitectura desacoplada:
-- **Backend:** API REST con Spring Boot, Spring Security (sesiones HTTP seguras basadas en cookies y protección CORS), Spring Data JPA con bloqueo pesimista concurrente, Flyway para migraciones y cálculo financiero de alta precisión con `BigDecimal`.
-- **Frontend:** Single Page Application (SPA) en React + Vite + Bootstrap 5, con componentes interactivos para búsqueda de identidad, simulación de cuotas, registro de préstamos, detalle de cronogramas con amortizaciones y panel ejecutivo para la gerencia general.
+- **Originación:** validación de identidad con RENIEC (personas) y SUNAT (empresas con RUC), simulación del cronograma y generación del contrato.
+- **Formalización:** impresión del contrato, carga del contrato firmado (con hash SHA-256) y activación del préstamo.
+- **Cobranza:** cobro secuencial de cuotas, cancelación anticipada y comprobantes electrónicos simulados (boleta y factura).
+- **Caja por agencia:** apertura con la remesa de Hermes, incidencias por diferencias, descuento de desembolsos y cierre diario.
+- **Supervisión:** panel ejecutivo del gerente, administración de personal y consulta de cierres de caja.
+
+Arquitectura desacoplada: este servicio expone la API y el frontend la consume con sesión HTTP por cookie (CORS con credenciales). Los cálculos financieros usan `BigDecimal` y los cobros usan bloqueo pesimista para evitar carreras concurrentes.
 
 ---
 
-## 🚀 Puesta en Marcha
+## 🚀 Puesta en marcha
 
 ### Prerrequisitos
 - **Java 21 LTS**
-- **Node.js 18+** y **npm**
-- **PostgreSQL 18.6** corriendo en el puerto `5432` con la base de datos `pagaopiudb` (usuario `postgres`, contraseña `blae`).
+- **PostgreSQL 18.x** en el puerto `5432` con una base `pagaopiudb`
+- **Node.js 20+** y **npm** (para el frontend)
 
-### 1. Iniciar el Backend (Spring Boot)
+### 1. Iniciar el backend
+
+`application.properties` **no define valores por defecto** para la base de datos ni para el origen del frontend, así que hay que indicarlos por variables de entorno:
+
 ```powershell
+$env:DB_URL = "jdbc:postgresql://localhost:5432/pagaopiudb"
+$env:DB_USERNAME = "postgres"
+$env:DB_PASSWORD = "<su-contraseña>"
+$env:FRONTEND_URL = "http://localhost:5173"
+$env:RENIEC_PROVIDER = "simulado"     # sin token de API externa (ver más abajo)
+
 ./mvnw.cmd spring-boot:run
 ```
-El servidor backend iniciará en `http://localhost:8080`.
-Al arrancar por primera vez, Flyway ejecuta automáticamente las migraciones y el inicializador `DemoDataInitializer` siembra los 4 escenarios de prueba para la evaluación.
 
-### 2. Iniciar el Frontend (React + Vite)
+El servidor queda en `http://localhost:8080`. Al arrancar, Flyway aplica las migraciones pendientes.
+
+### 2. Iniciar el frontend
+
 ```powershell
 cd ../pegapiu-frontend
 npm install
 npm run dev
 ```
-La aplicación web estará disponible en `http://localhost:5173`.
+
+La aplicación web queda en `http://localhost:5173` y reenvía `/api` al backend (proxy de Vite).
 
 ---
 
-## 👥 Usuarios de Prueba y Credenciales
+## ⚙️ Variables de entorno
 
-Todos los usuarios cuentan con la contraseña: **`password123`**
+<!-- AUTO-GENERATED: variables de entorno (fuente: src/main/resources/application.properties y @Value en el código) -->
 
-| Rol | Usuario | Nombre | Sucursal Asignada | Alcance Operativo |
-|---|---|---|---|---|
-| **GERENTE** | `gerente` | Gerente General | Global | Acceso exclusivo al Panel de Control y Supervisión (R14). Solo lectura. |
-| **ASESOR** | `asesor.trujillo` | Asesor Trujillo | Trujillo | Registro de préstamos en Trujillo, búsqueda de identidad RENIEC, cobro de cuotas. |
-| **ASESOR** | `asesor.piura` | Asesor Piura | Piura | Operaciones en Piura y cobro multicanal de clientes de cualquier sucursal. |
-| **ASESOR** | `asesor.chiclayo` | Asesor Chiclayo | Chiclayo | Operaciones en Chiclayo y cobro multicanal. |
-| **ASESOR** | `asesor.chimbote` | Asesor Chimbote | Chimbote | Operaciones en Chimbote y cobro multicanal. |
-| **ASESOR** | `asesor.tumbes` | Asesor Tumbes | Tumbes | Operaciones en Tumbes y cobro multicanal. |
+| Variable | Obligatoria | Por defecto | Descripción |
+|---|---|---|---|
+| `DB_URL` | Sí | — | URL JDBC de PostgreSQL, p. ej. `jdbc:postgresql://localhost:5432/pagaopiudb` |
+| `DB_USERNAME` | Sí | — | Usuario de la base de datos |
+| `DB_PASSWORD` | Sí | — | Contraseña de la base de datos |
+| `FRONTEND_URL` | Sí | — | Origen(es) permitidos por CORS, separados por coma (p. ej. `http://localhost:5173`) |
+| `PORT` | No | `8080` | Puerto del servidor |
+| `RENIEC_PROVIDER` | No | `api` | `api` usa api.json.pe; `simulado` usa el padrón local (`reniec_padron`) |
+| `RENIEC_API_URL` | No | `https://api.json.pe/api/dni` | Endpoint de consulta de DNI |
+| `RENIEC_API_TOKEN` | No | vacío | Token de api.json.pe (también se usa para SUNAT) |
+| `STORAGE_PROVIDER` | No | `local` | Almacenamiento de contratos firmados |
+| `STORAGE_DIR` | No | `./uploads/contratos` | Carpeta de contratos cuando el almacenamiento es local |
+| `FIRMA_GERENTE_PATH` | No | vacío | Ruta de la imagen de firma del gerente para el contrato |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | No | vacío | Credenciales de Cloudinary |
+| `APP_DEMO_SEED_ENABLED` | No | `true` | Siembra datos demo si la base no tiene préstamos |
+| `APP_CRON_RECALCULO_ESTADOS` | No | `0 0 1 * * *` | Cron del recálculo de morosidad (zona America/Lima) |
+| `APP_CRON_VENCIMIENTO_CONTRATOS` | No | `0 5 0 * * *` | Cron del vencimiento de contratos en espera (zona America/Lima) |
 
----
+Parámetros de negocio fijos en `application.properties`: `app.prestamo.monto-minimo=1`, `app.prestamo.monto-maximo=10000`, `app.prestamo.tea=0.30`, datos del emisor del contrato (`app.emisor.*`) y límite de carga de archivos de 5 MB. Las cookies de sesión se emiten con `SameSite=None; Secure`.
 
-## 🎯 Datos Demo para Evaluación en Vivo
-
-La base de datos se inicializa automáticamente con los 4 escenarios representativos:
-
-| Escenario | DNI | Nombre Completo | Sucursal Origen | Estado Préstamo | Estado Cliente | Observaciones |
-|---|---|---|---|---|---|---|
-| **1. Préstamo al día** | `27427864` | CASTILLO TERRONES, JOSE PEDRO | Trujillo | `VIGENTE` | `ACTIVO` | Cuotas 1 y 2 pagadas puntualmente. Restante al día. |
-| **2. Cliente moroso** | `10000001` | Juan Carlos Pérez López | Piura | `MOROSO` | `MOROSO` | Cuota 1 vencida hace 15 días ($< \text{hoy}$). Bloqueado para nuevos créditos. |
-| **3. Extrajudicial** | `10000002` | María Elena García Ríos | Chiclayo | `EXTRAJUDICIAL` | `EXTRAJUDICIAL` | Atraso $\ge 365$ días. No admite pagos ordinarios ni revierte solo. |
-| **4. Al tope de deuda** | `10000006` | César Abraham Vallejo Mendoza | Chimbote | `VIGENTE` | `ACTIVO` | Saldo pendiente = S/ 10,000.00. Nueva solicitud es rechazada por exceder cupo. |
-
----
-
-## 📜 Reglas de Negocio Implementadas (R1 a R14)
-
-### Registro de Préstamo
-- **R1 (Campos Obligatorios):** DNI, nombre del cliente, monto, plazo y fecha del crédito son obligatorios tanto en DTO como en servicio transaccional.
-- **R2 (Validación RENIEC):** El DNI debe existir en el padrón nacional, tener estado vigente (`dni_vigente = true`), no figurar como fallecido y pertenecer a ciudadano peruano.
-- **R3 (Nombre Exacto con NFC):** El nombre ingresado debe coincidir de forma estricta (sensible a mayúsculas, minúsculas y tildes diacríticas) aplicando normalización Unicode NFC en ambos extremos.
-- **R4 (Rango de Plazo):** El plazo debe encontrarse entre 1 y 60 meses calendario.
-- **R5 (Rango de Monto):** Monto mínimo configurable (S/ 1.00) y monto máximo de S/ 10,000.00.
-- **R6 (Tope de Deuda de S/ 10,000.00):** La suma del capital de las cuotas pendientes de préstamos activos más el nuevo crédito no puede superar los S/ 10,000.00. Se asegura la consistencia con bloqueo pesimista `PESSIMISTIC_WRITE` a nivel de fila de base de datos.
-- **R7 (Filtro de Morosidad):** Clientes con estado `MOROSO` o `EXTRAJUDICIAL` son rechazados automáticamente tras recálculo en tiempo de solicitud.
-- **R8 (Fecha no Futura):** La fecha del préstamo debe ser igual o anterior a la fecha actual del sistema (`Clock`), rechazando fechas futuras.
-- **R9 (Cronograma Francés):** Amortización por cuota fija (método francés) con TEA del 30%, TEM calculada a 10 decimales, vencimientos cada 30 días, redondeo `HALF_UP` y absorción del céntimo residual en la última cuota para saldo final exacto de S/ 0.00.
-
-### Cobranza y Pagos
-- **R10 (Pago Secuencial):** Cobro exclusivo de la cuota pendiente más antigua. No admite amortizaciones parciales ni salteo de cuotas. Bloqueo pesimista `PESSIMISTIC_WRITE` para evitar carreras concurrentes.
-- **R11 (Cobro Multicanal Intersucursales):** Los clientes pueden pagar en cualquiera de las 5 sucursales. El recaudo se registra y contabiliza para la sucursal del asesor que ejecuta el cobro.
-- **R12 (Cancelación Anticipada):** Liquidación inmediata de todas las cuotas pendientes en una sola transacción, marcando el crédito como `CANCELADO` con fecha de cancelación sin recálculo de intereses.
-
-### Estados y Supervisión Gerencial
-- **R13 (Estados Dinámicos y Proceso Nocturno):** 
-  - Si una cuota pendiente vence ($< \text{hoy}$), el préstamo pasa a `MOROSO` y el cliente a `MOROSO`.
-  - Si el atraso de la cuota más antigua alcanza $\ge 365$ días, pasa a `EXTRAJUDICIAL` (no admite pagos del sistema y no revierte solo).
-  - Al saldar las cuotas morosas, el préstamo y cliente revierten automáticamente a `VIGENTE` y `ACTIVO`.
-  - Tarea programada `@Scheduled(cron = "0 0 1 * * *")` 100% idempotente que reclasifica la cartera todas las madrugadas.
-- **R14 (Panel del Gerente General):** 
-  - El Asesor tiene permisos de registro y cobro pero recibe `403 Forbidden` en el panel gerencial.
-  - El Gerente General cuenta con un dashboard ejecutivo exclusivo de solo lectura que presenta:
-    - Préstamos activos clasificados por **sucursal de origen**.
-    - Recaudación e intereses devengados clasificados por **sucursal de pago**.
-    - Conteo global de clientes en mora y cobranza judicial.
+<!-- /AUTO-GENERATED -->
 
 ---
 
-## 🧪 Ejecución de Pruebas Automatizadas
+## 👥 Usuarios de prueba
 
-El proyecto cuenta con **57 pruebas de integración** contra PostgreSQL real (sin mocks de repositorios ni bases en memoria H2):
+Todos los usuarios demo (migración `V2.1`) tienen la contraseña: **`password123`**
+
+| Rol | Usuario | Sucursal | Alcance operativo |
+|---|---|---|---|
+| **GERENTE** | `gerente` | Global | Panel de supervisión, administración de personal, cierre de incidencias de Hermes y consulta de cierres de caja. |
+| **ASESOR** | `asesor.chimbote` | Chimbote | Opera su agencia: apertura y cierre de caja, préstamos, cobranza. |
+| **ASESOR** | `asesor.trujillo` | Trujillo | Ídem. |
+| **ASESOR** | `asesor.chiclayo` | Chiclayo | Ídem. |
+| **ASESOR** | `asesor.piura` | Piura | Ídem. |
+| **ASESOR** | `asesor.tumbes` | Tumbes | Ídem. |
+
+Los asesores pueden cobrar préstamos de cualquier sucursal (cobro intersucursal); el recaudo se contabiliza para la agencia que cobra.
+
+---
+
+## 🎯 Datos demo
+
+Con `APP_DEMO_SEED_ENABLED=true` (valor por defecto), `DemoDataInitializer` siembra estos escenarios **solo si la tabla `prestamo` está vacía**:
+
+| Escenario | DNI | Nombre | Agencia | Préstamo | Cliente |
+|---|---|---|---|---|---|
+| Préstamo al día | `27427864` | CASTILLO TERRONES, JOSE PEDRO | Trujillo | `VIGENTE` | `ACTIVO` |
+| Cliente moroso | `10000001` | Juan Carlos Pérez López | Piura | `MOROSO` | `MOROSO` |
+| Extrajudicial | `10000002` | María Elena García Ríos | Chiclayo | `EXTRAJUDICIAL` | `EXTRAJUDICIAL` |
+| Al tope de deuda | `10000006` | César Abraham Vallejo Mendoza | Chimbote | `VIGENTE` | `ACTIVO` |
+
+Padrón RENIEC de prueba (`V3`): DNI `10000001` a `10000017` (peruanos válidos), `99999901` (fallecido), `99999902` (DNI no vigente) y `99999903` (extranjero).
+Empresas de prueba (modo simulado): RUC `20987654321` (Comercial Los Andes, representante DNI `10000001`), `20123456789` (representante `10000002`) y `20552103816`; cualquier otro RUC de 11 dígitos devuelve una empresa genérica.
+
+---
+
+## 📜 Módulos y reglas de negocio
+
+### Registro de préstamo (R1 a R9)
+- **R1 (Campos obligatorios):** DNI, nombre, monto, plazo y fecha del crédito.
+- **R2 (Validación RENIEC):** el DNI debe existir, estar vigente, no figurar como fallecido y ser de ciudadano peruano.
+- **R3 (Nombre exacto con NFC):** el nombre debe coincidir con RENIEC, con normalización Unicode NFC y sensible a tildes.
+- **R4 (Plazo):** entre 1 y 60 meses.
+- **R5 (Monto):** mínimo configurable (S/ 1.00) y máximo de S/ 10,000.00.
+- **R6 (Tope de deuda):** el saldo pendiente de préstamos activos más el nuevo crédito no puede superar S/ 10,000.00 (bloqueo `PESSIMISTIC_WRITE`).
+- **R7 (Filtro de morosidad):** los clientes `MOROSO` o `EXTRAJUDICIAL` son rechazados.
+- **R8 (Fecha):** la fecha del préstamo debe ser la fecha actual del sistema (zona America/Lima).
+- **R9 (Cronograma francés):** cuota fija, TEA 30 %, TEM a 10 decimales, vencimientos cada 30 días, redondeo `HALF_UP` y céntimo residual absorbido en la última cuota.
+
+### Contratos y empresas (RUC)
+- El contrato nace en `EN_ESPERA`, se imprime y se activa (`VIGENTE`) al subir el contrato firmado con el mismo número (se guarda su hash SHA-256 y se rechazan archivos repetidos). Un contrato no firmado vence con la tarea `vencimiento-contratos`.
+- **RUC 20 (empresas):** la empresa debe estar `ACTIVO` y `HABIDO` en SUNAT. El asesor ingresa el **DNI de la persona que se presenta** y el servidor comprueba que sea **uno de los representantes legales** listados por SUNAT, que su DNI esté vigente en RENIEC y que el nombre coincida. Los datos del representante los toma el servidor de SUNAT.
+- **Regla M2:** `GET /api/cliente/buscar` **no devuelve** nombre ni DNI del representante (solo su cargo); `GET /api/cliente/validar-representante` responde únicamente `valido` y un mensaje.
+- **RUC 10:** el DNI presentado debe coincidir con los dígitos 3 a 10 del RUC.
+
+### Cobranza y pagos (R10 a R12)
+- **R10 (Pago secuencial):** solo se cobra la cuota pendiente más antigua, sin pagos parciales ni salto de cuotas.
+- **R11 (Cobro intersucursal):** se puede pagar en cualquier sucursal; el recaudo cuenta para la sucursal del asesor.
+- **R12 (Cancelación anticipada):** liquida todas las cuotas pendientes en una transacción y marca el crédito como `CANCELADO`.
+
+### Estados y morosidad (R13)
+- Una cuota pendiente con vencimiento anterior a hoy vuelve el préstamo y el cliente `MOROSO`.
+- Con atraso de la cuota más antigua de **365 días o más** pasa a `EXTRAJUDICIAL`: no admite pagos en ventanilla y no revierte solo.
+- Al saldar las cuotas vencidas, el préstamo vuelve a `VIGENTE` y el cliente a `ACTIVO`.
+- El recálculo ocurre **al registrar un pago** y con la tarea programada nocturna (01:00, America/Lima). Entre un vencimiento y la siguiente ejecución el préstamo sigue como `VIGENTE`.
+- La cuota vencida se cobra por su monto normal: el sistema **no calcula recargo por mora**.
+
+### Caja por agencia y Hermes
+- **Apertura:** el asesor registra la remesa diaria de Hermes (código de un solo uso, monto apto y monto observado; el esperado es S/ 50,000.00). Solo el monto apto ingresa al saldo.
+- **Incidencias:** si hay monto observado o diferencia, se exige un motivo y se crea una incidencia `ABIERTA` que solo el gerente puede cerrar con una resolución escrita.
+- **Desembolso:** al activar un préstamo se descuenta su capital del saldo de la caja de la agencia (falla si el saldo es insuficiente o la caja ya fue cerrada).
+- **Cierre diario:** `POST /api/caja/cerrar` registra saldo final, total cobrado del día, quién cerró y una observación. Después del cierre no se aceptan remesas ni desembolsos. El gerente consulta los cierres en `GET /api/caja/cierres`.
+- Los cobros de cuotas suman al "total cobrado" del día, pero **no incrementan el saldo disponible** de la caja.
+
+### Supervisión gerencial (R14)
+- El panel muestra préstamos activos por **sucursal de origen**, recaudación e intereses por **sucursal de pago**, y el conteo de clientes en mora y en cobranza judicial.
+- El rol `ASESOR` recibe `403` en los recursos del gerente.
+
+---
+
+## 🔌 API REST
+
+<!-- AUTO-GENERATED: endpoints (fuente: controller/ y security/SecurityConfig.java) -->
+
+Todas las rutas cuelgan de `/api` y usan sesión por cookie. Un `401` significa que no hay sesión; un `403`, que el rol no tiene permiso.
+
+| Recurso | Endpoints | Acceso |
+|---|---|---|
+| `/api/auth` | `POST /login` · `GET /me` · `POST /logout` · `POST /cambiar-password` | Público (login/me); sesión (resto) |
+| `/api/cliente` | `GET /buscar` · `GET /validar-representante` | `ASESOR` |
+| `/api/prestamo` | `GET /{id}` · `GET /cliente/{dni}` · `GET /simular` · `GET /recientes` | `ASESOR` (`/recientes`: asesor o gerente) |
+| `/api/contratos` | `POST /generar` · `GET /{id}` · `POST /{id}/imprimir` · `POST /{id}/cancelar` · `POST /{id}/subir-firmado` · `GET /{id}/descargar` · `GET /en-espera` · `GET /firma-gerente` | `ASESOR`, `GERENTE` |
+| `/api/pago` | `POST /cuota/{prestamoId}` · `POST /cancelar/{prestamoId}` · `GET /prestamo/{prestamoId}` · `GET /{id}` | `ASESOR` |
+| `/api/caja` | `POST /hermes/recepcion` · `POST /cerrar` · `GET /estado` · `GET /cierres` | Sesión (`/cierres`: `GERENTE`) |
+| `/api/incidencias` | `GET /` · `POST /{id}/cerrar` | Sesión (cerrar: `GERENTE`, validado en el servicio) |
+| `/api/sucursales` | `GET /` | `ASESOR`, `GERENTE` |
+| `/api/usuarios` | `GET /` · `POST /` · `PUT /{id}/activo` · `PUT /{id}/password` · `GET /sucursales` | `GERENTE` |
+| `/api/panel` | `GET /` | `GERENTE` |
+
+<!-- /AUTO-GENERATED -->
+
+---
+
+## 🗄️ Base de datos y migraciones
+
+Flyway (`classpath:db/migration`) administra el esquema y Hibernate solo lo valida (`ddl-auto=validate`).
+
+<!-- AUTO-GENERATED: migraciones (fuente: src/main/resources/db/migration) -->
+
+| Migración | Contenido |
+|---|---|
+| `V1__esquema` | Esquema base: clientes, préstamos, cuotas, pagos y usuarios |
+| `V2__sucursales` / `V2.1__usuarios_demo` | Las 5 sucursales y los usuarios demo |
+| `V3__padron_reniec` | Padrón RENIEC de prueba |
+| `V4__contrato_y_estados` | Contratos y nuevos estados de préstamo |
+| `V5__comprobantes_pago` | Comprobantes de pago (boleta y factura) |
+| `V6__soporte_ruc_cliente` | Soporte de RUC para clientes empresa |
+| `V7__snapshot_empresa` | Datos de la empresa y su representante en el contrato |
+| `V8__caja_hermes_incidencias` | Caja por sucursal, remesas de Hermes e incidencias |
+| `V9__cierre_caja` | Columnas de cierre diario de caja |
+
+<!-- /AUTO-GENERATED -->
+
+---
+
+## 🧪 Pruebas automatizadas
+
+Hay **128 pruebas** en 19 clases: integración contra PostgreSQL real (sin H2 ni mocks de repositorios) y pruebas unitarias del cálculo del cronograma.
+
+> ⚠️ **Las pruebas usan por defecto la base `pagaopiudb` y su limpiador (`TestDatabaseCleaner`) ejecuta `DELETE` sobre `incidencia_hermes`, `entrega_hermes`, `caja_sucursal`, `cuota`, `pago`, `prestamo` y `cliente`.**
+> Ejecútelas siempre contra una base **separada** para no perder datos:
 
 ```powershell
-# Ejecutar la suite completa (57 tests)
-./mvnw.cmd test
+# Crear una vez la base de pruebas (Flyway aplica las migraciones al primer uso)
+createdb -U postgres pagaopiudb_test
 
-# Ejecutar la suite trazable de reglas de negocio R1 a R14
-./mvnw.cmd test -Dtest=ReglasNegocioTrazablesIntegrationTest
+$env:DB_URL = "jdbc:postgresql://localhost:5432/pagaopiudb_test"
+$env:DB_USERNAME = "postgres"
+$env:DB_PASSWORD = "<su-contraseña>"
 
-# Ejecutar pruebas por módulo específico
+./mvnw.cmd test                                                  # suite completa
+./mvnw.cmd test -Dtest=ReglasNegocioTrazablesIntegrationTest     # reglas R1 a R14
+./mvnw.cmd test -Dtest=HermesCajaIntegrationTest                 # caja y remesas
+./mvnw.cmd test -Dtest=ValidarRepresentanteIntegrationTest       # representante de empresa
 ./mvnw.cmd test -Dtest=PrestamoIntegrationTest
 ./mvnw.cmd test -Dtest=PagoIntegrationTest
 ./mvnw.cmd test -Dtest=EstadoIntegrationTest
 ./mvnw.cmd test -Dtest=PanelIntegrationTest
 ```
+
+---
+
+## 🐳 Docker y despliegue
+
+- **Imagen:** `Dockerfile` en dos etapas (Maven + JDK 21 para compilar; JRE 21 Alpine para ejecutar, con usuario sin privilegios). Expone el puerto `8080` y guarda los contratos en `/app/uploads/contratos`.
+- **CI/CD:** `.github/workflows/ci-cd.yml` ejecuta `./mvnw clean test` y el empaquetado en cada push o pull request a `main`/`master`, y despliega la imagen a **Google Cloud Run** (Artifact Registry) con el secreto `GCP_SA_KEY`.
+- **En producción** deben definirse `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` y `FRONTEND_URL` (la URL pública del frontend); el resto según la tabla de variables. Las cookies `Secure` exigen HTTPS entre frontend y backend.
