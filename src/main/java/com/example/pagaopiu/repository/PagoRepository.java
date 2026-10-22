@@ -30,6 +30,13 @@ public interface PagoRepository extends JpaRepository<Pago, Long> {
     """)
     BigDecimal sumMontoBySucursalId(@Param("sucursalId") Long sucursalId);
 
+    @Query("""
+        SELECT COALESCE(SUM(p.monto), 0)
+        FROM Pago p
+        WHERE p.sucursal.id = :sucursalId AND p.fechaPago = :fecha
+    """)
+    BigDecimal sumMontoBySucursalIdAndFecha(@Param("sucursalId") Long sucursalId, @Param("fecha") java.time.LocalDate fecha);
+
     @Query(value = "SELECT nextval('seq_numero_boleta')", nativeQuery = true)
     Long getNextBoletaSequence();
 

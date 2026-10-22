@@ -33,6 +33,32 @@ public class CajaRestController {
         return ResponseEntity.ok(resp);
     }
 
+    @PostMapping("/cerrar")
+    public ResponseEntity<CajaEstadoResponseDTO> cerrarCaja(
+            @RequestBody(required = false) java.util.Map<String, Object> body,
+            @AuthenticationPrincipal UsuarioPrincipal principal) {
+        Long sucursalId = null;
+        String observacion = null;
+        if (body != null) {
+            if (body.get("sucursalId") instanceof Number n) {
+                sucursalId = n.longValue();
+            }
+            if (body.get("observacion") != null) {
+                observacion = String.valueOf(body.get("observacion"));
+            }
+        }
+        return ResponseEntity.ok(cajaHermesService.cerrarCaja(sucursalId, observacion, principal.getUsername()));
+    }
+
+    @GetMapping("/cierres")
+    public ResponseEntity<java.util.List<CajaEstadoResponseDTO>> listarCierres(
+            @RequestParam(value = "desde", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate desde,
+            @RequestParam(value = "hasta", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate hasta,
+            @RequestParam(value = "sucursalId", required = false) Long sucursalId,
+            @AuthenticationPrincipal UsuarioPrincipal principal) {
+        return ResponseEntity.ok(cajaHermesService.listarCierres(desde, hasta, sucursalId, principal.getUsername()));
+    }
+
     @GetMapping("/estado")
     public ResponseEntity<CajaEstadoResponseDTO> obtenerEstadoCaja(
             @RequestParam(value = "sucursalId", required = false) Long sucursalId,

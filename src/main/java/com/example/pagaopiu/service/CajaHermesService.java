@@ -18,6 +18,10 @@ public interface CajaHermesService {
 
     CajaEstadoResponseDTO obtenerEstadoCaja(Long sucursalId, String username);
 
+    List<CajaEstadoResponseDTO> listarCierres(java.time.LocalDate desde, java.time.LocalDate hasta, Long sucursalId, String username);
+
+    CajaEstadoResponseDTO cerrarCaja(Long sucursalId, String observacion, String username);
+
     List<IncidenciaHermesDTO> listarIncidencias(EstadoIncidenciaHermes estado, Long sucursalId, String username);
 
     IncidenciaHermesDTO cerrarIncidencia(Long incidenciaId, String resolucion, String usernameGerente);

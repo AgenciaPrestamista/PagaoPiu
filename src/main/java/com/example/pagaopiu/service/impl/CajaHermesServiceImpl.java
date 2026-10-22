@@ -16,6 +16,7 @@ import com.example.pagaopiu.model.enums.Rol;
 import com.example.pagaopiu.repository.CajaSucursalRepository;
 import com.example.pagaopiu.repository.EntregaHermesRepository;
 import com.example.pagaopiu.repository.IncidenciaHermesRepository;
+import com.example.pagaopiu.repository.PagoRepository;
 import com.example.pagaopiu.repository.UsuarioRepository;
 import com.example.pagaopiu.repository.SucursalRepository;
 import com.example.pagaopiu.service.CajaHermesService;
@@ -41,14 +42,17 @@ public class CajaHermesServiceImpl implements CajaHermesService {
     private final UsuarioRepository usuarioRepository;
     private final SucursalRepository sucursalRepository;
     private final Clock clock;
+    private final PagoRepository pagoRepository;
 
     public CajaHermesServiceImpl(
+            PagoRepository pagoRepository,
             CajaSucursalRepository cajaSucursalRepository,
             EntregaHermesRepository entregaHermesRepository,
             IncidenciaHermesRepository incidenciaHermesRepository,
             UsuarioRepository usuarioRepository,
             SucursalRepository sucursalRepository,
             Clock clock) {
+        this.pagoRepository = pagoRepository;
         this.cajaSucursalRepository = cajaSucursalRepository;
         this.entregaHermesRepository = entregaHermesRepository;
         this.incidenciaHermesRepository = incidenciaHermesRepository;
@@ -122,6 +126,10 @@ public class CajaHermesServiceImpl implements CajaHermesService {
                         .montoObservadoAcumulado(BigDecimal.ZERO)
                         .abierta(false)
                         .build());
+
+        if (caja.isCerrada()) {
+            throw new NegocioException("La caja de hoy ya fue cerrada; no se pueden registrar nuevas remesas.");
+        }
 
         caja.setSaldoDisponible(caja.getSaldoDisponible().add(montoApto));
         caja.setMontoObservadoAcumulado(caja.getMontoObservadoAcumulado().add(montoObservado));
@@ -214,16 +222,7 @@ public class CajaHermesServiceImpl implements CajaHermesService {
                     .build();
         }
 
-        CajaSucursal c = cajaOpt.get();
-        return CajaEstadoResponseDTO.builder()
-                .sucursalId(c.getSucursal().getId())
-                .sucursalNombre(c.getSucursal().getNombre())
-                .fecha(c.getFecha())
-                .saldoDisponible(c.getSaldoDisponible())
-                .montoObservadoAcumulado(c.getMontoObservadoAcumulado())
-                .abierta(c.isAbierta())
-                .usuarioApertura(c.getUsuarioApertura() != null ? c.getUsuarioApertura().getNombre() : null)
-                .build();
+        return aEstadoDTO(cajaOpt.get());
     }
 
     @Override
@@ -249,16 +248,7 @@ public class CajaHermesServiceImpl implements CajaHermesService {
                     .build();
         }
 
-        CajaSucursal c = cajaOpt.get();
-        return CajaEstadoResponseDTO.builder()
-                .sucursalId(c.getSucursal().getId())
-                .sucursalNombre(c.getSucursal().getNombre())
-                .fecha(c.getFecha())
-                .saldoDisponible(c.getSaldoDisponible())
-                .montoObservadoAcumulado(c.getMontoObservadoAcumulado())
-                .abierta(c.isAbierta())
-                .usuarioApertura(c.getUsuarioApertura() != null ? c.getUsuarioApertura().getNombre() : null)
-                .build();
+        return aEstadoDTO(cajaOpt.get());
     }
 
     @Override
@@ -308,6 +298,9 @@ public class CajaHermesServiceImpl implements CajaHermesService {
         Optional<CajaSucursal> cajaOpt = cajaSucursalRepository.findBySucursalIdAndFechaWithLock(sucursalId, hoy);
         if (cajaOpt.isPresent()) {
             CajaSucursal caja = cajaOpt.get();
+            if (caja.isCerrada()) {
+                throw new NegocioException("La caja de la sucursal ya fue cerrada hoy; no se pueden realizar desembolsos.");
+            }
             if (caja.isAbierta()) {
                 if (caja.getSaldoDisponible().compareTo(monto) < 0) {
                     throw new NegocioException(String.format(
@@ -318,6 +311,88 @@ public class CajaHermesServiceImpl implements CajaHermesService {
                 cajaSucursalRepository.save(caja);
             }
         }
+    }
+
+    @Override
+    @Transactional
+    public CajaEstadoResponseDTO cerrarCaja(Long sucursalId, String observacion, String username) {
+        Usuario usuario = usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new NegocioException("Usuario no encontrado: " + username));
+
+        Long idSucursal;
+        if (usuario.getRol() == Rol.GERENTE) {
+            idSucursal = sucursalId != null ? sucursalId
+                    : (usuario.getSucursal() != null ? usuario.getSucursal().getId() : null);
+        } else {
+            if (usuario.getSucursal() == null) {
+                throw new NegocioException("El usuario no tiene una sucursal asignada para cerrar caja.");
+            }
+            idSucursal = usuario.getSucursal().getId();
+        }
+        if (idSucursal == null) {
+            throw new NegocioException("Debe indicar la sucursal cuya caja se desea cerrar.");
+        }
+
+        LocalDate hoy = LocalDate.now(clock);
+        CajaSucursal caja = cajaSucursalRepository.findBySucursalIdAndFechaWithLock(idSucursal, hoy)
+                .orElseThrow(() -> new NegocioException("La caja de hoy no fue abierta; no hay nada que cerrar."));
+        if (caja.isCerrada()) {
+            throw new NegocioException("La caja de hoy ya fue cerrada.");
+        }
+        if (!caja.isAbierta()) {
+            throw new NegocioException("La caja de hoy no está abierta.");
+        }
+
+        BigDecimal totalCobrado = pagoRepository.sumMontoBySucursalIdAndFecha(idSucursal, hoy);
+        caja.setCerrada(true);
+        caja.setAbierta(false);
+        caja.setUsuarioCierre(usuario);
+        caja.setFechaCierre(LocalDateTime.now(clock));
+        caja.setSaldoCierre(caja.getSaldoDisponible());
+        caja.setTotalCobradoCierre(totalCobrado);
+        caja.setObservacionCierre(observacion != null && !observacion.isBlank() ? observacion.trim() : null);
+        return aEstadoDTO(cajaSucursalRepository.save(caja));
+    }
+
+    private CajaEstadoResponseDTO aEstadoDTO(CajaSucursal c) {
+        BigDecimal cobradoHoy = c.isCerrada() && c.getTotalCobradoCierre() != null
+                ? c.getTotalCobradoCierre()
+                : pagoRepository.sumMontoBySucursalIdAndFecha(c.getSucursal().getId(), c.getFecha());
+        return CajaEstadoResponseDTO.builder()
+                .sucursalId(c.getSucursal().getId())
+                .sucursalNombre(c.getSucursal().getNombre())
+                .fecha(c.getFecha())
+                .saldoDisponible(c.getSaldoDisponible())
+                .montoObservadoAcumulado(c.getMontoObservadoAcumulado())
+                .abierta(c.isAbierta())
+                .usuarioApertura(c.getUsuarioApertura() != null ? c.getUsuarioApertura().getNombre() : null)
+                .cerrada(c.isCerrada())
+                .usuarioCierre(c.getUsuarioCierre() != null ? c.getUsuarioCierre().getNombre() : null)
+                .fechaCierre(c.getFechaCierre())
+                .saldoCierre(c.getSaldoCierre())
+                .totalCobradoCierre(c.getTotalCobradoCierre())
+                .totalCobradoHoy(cobradoHoy)
+                .observacionCierre(c.getObservacionCierre())
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CajaEstadoResponseDTO> listarCierres(LocalDate desde, LocalDate hasta, Long sucursalId, String username) {
+        Usuario usuario = usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new NegocioException("Usuario no encontrado: " + username));
+        if (usuario.getRol() != Rol.GERENTE) {
+            throw new NegocioException("Solo el Gerente General puede consultar los cierres de caja.");
+        }
+        LocalDate fin = hasta != null ? hasta : LocalDate.now(clock);
+        LocalDate inicio = desde != null ? desde : fin.minusDays(30);
+        if (inicio.isAfter(fin)) {
+            throw new NegocioException("La fecha inicial no puede ser posterior a la fecha final.");
+        }
+        return cajaSucursalRepository.findByRangoFechas(inicio, fin).stream()
+                .filter(c -> sucursalId == null || c.getSucursal().getId().equals(sucursalId))
+                .map(this::aEstadoDTO)
+                .toList();
     }
 
     private IncidenciaHermesDTO mapIncidenciaToDTO(IncidenciaHermes i) {

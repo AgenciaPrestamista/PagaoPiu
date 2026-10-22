@@ -59,4 +59,24 @@ public class CajaSucursal {
 
     @Column(name = "fecha_apertura")
     private LocalDateTime fechaApertura;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean cerrada = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_cierre_id")
+    private Usuario usuarioCierre;
+
+    @Column(name = "fecha_cierre")
+    private LocalDateTime fechaCierre;
+
+    @Column(name = "saldo_cierre", precision = 12, scale = 2)
+    private BigDecimal saldoCierre;
+
+    @Column(name = "total_cobrado_cierre", precision = 12, scale = 2)
+    private BigDecimal totalCobradoCierre;
+
+    @Column(name = "observacion_cierre", length = 500)
+    private String observacionCierre;
 }

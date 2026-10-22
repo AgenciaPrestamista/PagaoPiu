@@ -2,6 +2,7 @@ package com.example.pagaopiu.dto.caja;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,4 +22,11 @@ public class CajaEstadoResponseDTO {
     private BigDecimal montoObservadoAcumulado;
     private boolean abierta;
     private String usuarioApertura;
+    private boolean cerrada;
+    private String usuarioCierre;
+    private LocalDateTime fechaCierre;
+    private BigDecimal saldoCierre;
+    private BigDecimal totalCobradoCierre;
+    private BigDecimal totalCobradoHoy;
+    private String observacionCierre;
 }
