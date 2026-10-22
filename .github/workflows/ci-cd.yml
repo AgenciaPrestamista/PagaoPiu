@@ -25,6 +25,23 @@ jobs:
     name: Build & Test (CI)
     runs-on: ubuntu-latest
 
+    # BD efímera solo para los tests: TestDatabaseCleaner borra tablas, así que
+    # NUNCA debe apuntar a la BD de producción (secrets.DB_URL).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: pagaopiu_ci
+          POSTGRES_USER: ci_user
+          POSTGRES_PASSWORD: ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci_user -d pagaopiu_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - name: 📥 Clonar repositorio
         uses: actions/checkout@v4
@@ -41,9 +58,9 @@ jobs:
 
       - name: 🧪 Ejecutar pruebas unitarias e integración
         env:
-          DB_URL: ${{ secrets.DB_URL }}
-          DB_USERNAME: ${{ secrets.DB_USERNAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_URL: "jdbc:postgresql://localhost:5432/pagaopiu_ci"
+          DB_USERNAME: "ci_user"
+          DB_PASSWORD: "ci_password"
           RENIEC_PROVIDER: "simulado"
           RENIEC_API_URL: "https://api.json.pe/api/dni"
           RENIEC_API_TOKEN: ${{ secrets.RENIEC_API_TOKEN }}
